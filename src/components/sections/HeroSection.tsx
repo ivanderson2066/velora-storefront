@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 
@@ -20,13 +21,17 @@ const HeroSection = () => {
               Thoughtfully designed essentials that blend function, comfort, and modern aesthetics.
             </p>
             <div className="flex flex-wrap gap-4 animate-fade-up" style={{ animationDelay: "300ms" }}>
-              <Button variant="velora" size="xl">
-                Shop the Collection
-                <ArrowRight className="w-4 h-4 ml-1" />
-              </Button>
-              <Button variant="velora-outline" size="xl">
-                Our Story
-              </Button>
+              <Link to="/shop">
+                <Button variant="velora" size="xl">
+                  Shop the Collection
+                  <ArrowRight className="w-4 h-4 ml-1" />
+                </Button>
+              </Link>
+              <a href="#about">
+                <Button variant="velora-outline" size="xl">
+                  Our Story
+                </Button>
+              </a>
             </div>
           </div>
 
