@@ -1,37 +1,28 @@
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Loader2 } from "lucide-react";
+import { fetchProducts, ShopifyProduct } from "@/lib/shopify";
+import { ProductCard } from "@/components/products/ProductCard";
 
 const FeaturedCollection = () => {
-  const products = [
-    {
-      id: 1,
-      name: "Minimal Desk Lamp",
-      price: "$89",
-      image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&q=80",
-      category: "Lighting",
-    },
-    {
-      id: 2,
-      name: "Ceramic Vase Set",
-      price: "$65",
-      image: "https://images.unsplash.com/photo-1578500494198-246f612d3b3d?w=600&q=80",
-      category: "Decor",
-    },
-    {
-      id: 3,
-      name: "Wooden Storage Box",
-      price: "$45",
-      image: "https://images.unsplash.com/photo-1595428774223-ef52624120d2?w=600&q=80",
-      category: "Storage",
-    },
-    {
-      id: 4,
-      name: "Linen Throw Blanket",
-      price: "$120",
-      image: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&q=80",
-      category: "Textiles",
-    },
-  ];
+  const [products, setProducts] = useState<ShopifyProduct[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const data = await fetchProducts(4);
+        setProducts(data);
+      } catch (error) {
+        console.error("Failed to load products:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProducts();
+  }, []);
 
   return (
     <section id="shop" className="velora-section bg-background">
@@ -48,40 +39,30 @@ const FeaturedCollection = () => {
         </div>
 
         {/* Products Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 mb-12">
-          {products.map((product) => (
-            <article
-              key={product.id}
-              className="group cursor-pointer"
-            >
-              {/* Image */}
-              <div className="relative aspect-[4/5] bg-secondary rounded-sm overflow-hidden mb-4">
-                <img
-                  src={product.image}
-                  alt={product.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-slow"
-                />
-                <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/5 transition-colors duration-smooth" />
-              </div>
-
-              {/* Info */}
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">{product.category}</p>
-                <h3 className="text-sm font-medium mb-1 group-hover:text-muted-foreground transition-colors">
-                  {product.name}
-                </h3>
-                <p className="text-sm font-medium">{product.price}</p>
-              </div>
-            </article>
-          ))}
-        </div>
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : products.length === 0 ? (
+          <div className="text-center py-20">
+            <p className="text-muted-foreground">No products found</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 mb-12">
+            {products.map((product) => (
+              <ProductCard key={product.node.id} product={product} />
+            ))}
+          </div>
+        )}
 
         {/* CTA */}
         <div className="text-center">
-          <Button variant="velora-outline" size="lg">
-            View All Products
-            <ArrowRight className="w-4 h-4 ml-1" />
-          </Button>
+          <Link to="/shop">
+            <Button variant="velora-outline" size="lg">
+              View All Products
+              <ArrowRight className="w-4 h-4 ml-1" />
+            </Button>
+          </Link>
         </div>
       </div>
     </section>

@@ -1,12 +1,14 @@
 import { useState } from "react";
-import { Menu, X, ShoppingBag, Search } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Menu, X, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CartDrawer } from "@/components/cart/CartDrawer";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const navLinks = [
-    { label: "Shop", href: "/#shop" },
+    { label: "Shop", href: "/shop" },
     { label: "Collections", href: "/collections" },
     { label: "About", href: "/#about" },
     { label: "Contact", href: "/#contact" },
@@ -27,11 +29,11 @@ const Header = () => {
           </Button>
 
           {/* Logo */}
-          <a href="/" className="flex items-center">
+          <Link to="/" className="flex items-center">
             <span className="text-xl lg:text-2xl font-semibold tracking-[0.2em] uppercase">
               Velora
             </span>
-          </a>
+          </Link>
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center gap-10">
@@ -51,12 +53,7 @@ const Header = () => {
             <Button variant="ghost" size="icon" className="hidden lg:flex">
               <Search className="w-5 h-5" />
             </Button>
-            <Button variant="ghost" size="icon" className="relative">
-              <ShoppingBag className="w-5 h-5" />
-              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-primary text-primary-foreground text-[10px] font-medium rounded-full flex items-center justify-center">
-                0
-              </span>
-            </Button>
+            <CartDrawer />
           </div>
         </div>
 
