@@ -10,6 +10,7 @@ export interface ShopifyProduct {
     id: string;
     title: string;
     description: string;
+    descriptionHtml?: string;
     handle: string;
     priceRange: {
       minVariantPrice: {
@@ -39,6 +40,10 @@ export interface ShopifyProduct {
             name: string;
             value: string;
           }>;
+          image?: {
+            url: string;
+            altText: string | null;
+          };
         };
       }>;
     };
@@ -90,6 +95,7 @@ const PRODUCTS_QUERY = `
           id
           title
           description
+          descriptionHtml
           handle
           priceRange {
             minVariantPrice {
@@ -119,6 +125,10 @@ const PRODUCTS_QUERY = `
                   name
                   value
                 }
+                image {
+                  url
+                  altText
+                }
               }
             }
           }
@@ -138,6 +148,7 @@ const PRODUCT_BY_HANDLE_QUERY = `
       id
       title
       description
+      descriptionHtml
       handle
       priceRange {
         minVariantPrice {
@@ -166,6 +177,10 @@ const PRODUCT_BY_HANDLE_QUERY = `
             selectedOptions {
               name
               value
+            }
+            image {
+              url
+              altText
             }
           }
         }

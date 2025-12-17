@@ -15,6 +15,7 @@ interface ProductNode {
   id: string;
   title: string;
   description: string;
+  descriptionHtml?: string;
   handle: string;
   priceRange: {
     minVariantPrice: {
@@ -44,6 +45,10 @@ interface ProductNode {
           name: string;
           value: string;
         }>;
+        image?: {
+          url: string;
+          altText: string | null;
+        };
       };
     }>;
   };
@@ -69,18 +74,18 @@ const ProductDetailPage = () => {
   useEffect(() => {
     const loadProduct = async () => {
       if (!handle) return;
-      
+
       try {
         const [productData, allProducts] = await Promise.all([
           fetchProductByHandle(handle),
           fetchProducts(5)
         ]);
-        
+
         setProduct(productData);
         if (productData?.variants.edges[0]) {
           setSelectedVariant(productData.variants.edges[0].node);
         }
-        
+
         // Filter out current product for related products
         const related = allProducts.filter(p => p.node.handle !== handle).slice(0, 4);
         setRelatedProducts(related);
@@ -95,6 +100,20 @@ const ProductDetailPage = () => {
     setSelectedImage(0);
     setQuantity(1);
   }, [handle]);
+
+  useEffect(() => {
+    if (!product || !selectedVariant) return;
+
+    if (selectedVariant.image?.url) {
+      const imageIndex = product.images.edges.findIndex(
+        edge => edge.node.url === selectedVariant.image?.url
+      );
+
+      if (imageIndex !== -1) {
+        setSelectedImage(imageIndex);
+      }
+    }
+  }, [selectedVariant, product]);
 
   const handleAddToCart = () => {
     if (!product || !selectedVariant) return;
@@ -368,11 +387,18 @@ const ProductDetailPage = () => {
           </div>
 
           {/* Product Description */}
-          {product.description && (
+          {(product.descriptionHtml || product.description) && (
             <div className="mt-16 pt-16 border-t border-border/50">
               <h2 className="velora-heading-sm mb-6">Product Description</h2>
               <div className="prose prose-neutral max-w-none">
-                <p className="velora-body whitespace-pre-line">{product.description}</p>
+                {product.descriptionHtml ? (
+                  <div
+                    className="velora-body [&_img]:rounded-lg [&_img]:my-6 [&_img]:w-full [&_img]:max-w-2xl [&_img]:mx-auto"
+                    dangerouslySetInnerHTML={{ __html: product.descriptionHtml }}
+                  />
+                ) : (
+                  <p className="velora-body whitespace-pre-line">{product.description}</p>
+                )}
               </div>
             </div>
           )}

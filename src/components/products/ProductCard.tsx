@@ -69,12 +69,17 @@ export const ProductCard = ({ product }: ProductCardProps) => {
         </div>
 
         <div>
-          <h3 className="text-sm font-medium mb-1 group-hover:text-muted-foreground transition-colors line-clamp-2">
+          <h3 className="text-sm font-medium mb-2 group-hover:text-muted-foreground transition-colors line-clamp-2">
             {node.title}
           </h3>
-          <p className="text-sm font-medium">
-            {price.currencyCode} {parseFloat(price.amount).toFixed(2)}
-          </p>
+          <div className="flex items-baseline gap-1">
+            <span className="text-lg font-semibold">
+              ${parseFloat(price.amount).toFixed(2)}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              USD
+            </span>
+          </div>
         </div>
       </Link>
     </article>
