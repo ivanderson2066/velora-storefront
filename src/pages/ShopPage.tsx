@@ -29,10 +29,10 @@ const ShopPage = () => {
   return (
     <>
       <Helmet>
-        <title>Shop | VELORA - Modern Lifestyle Essentials</title>
+        <title>Shop | MyxelHome - Smart Home Technology</title>
         <meta
           name="description"
-          content="Shop our collection of minimalist, thoughtfully designed products for modern living."
+          content="Shop innovative smart home gadgets. Levitating clocks, ambient lighting, humidifiers & more. Free USA shipping."
         />
       </Helmet>
 

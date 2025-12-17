@@ -30,11 +30,11 @@ const FeaturedCollection = () => {
         {/* Header */}
         <div className="text-center mb-12 lg:mb-16">
           <p className="text-xs tracking-[0.3em] uppercase text-muted-foreground mb-3">
-            Featured
+            Featured Products
           </p>
-          <h2 className="velora-heading-lg mb-4">Modern Essentials</h2>
+          <h2 className="velora-heading-lg mb-4">Smart Home Essentials</h2>
           <p className="velora-body max-w-xl mx-auto">
-            Curated products designed to enhance your daily routine — at home, at work, and on the go.
+            Discover our best-selling innovative gadgets that transform your home into a modern sanctuary.
           </p>
         </div>
 
