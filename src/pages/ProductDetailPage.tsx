@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { Loader2, ChevronLeft, Minus, Plus, Check, Shield, Truck, RefreshCw } from "lucide-react";
+import { Loader2, ChevronLeft, Minus, Plus, Check, Shield, Truck, RefreshCw, CreditCard, ShoppingBag } from "lucide-react";
 import AnnouncementBar from "@/components/layout/AnnouncementBar";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
-import { fetchProductByHandle } from "@/lib/shopify";
+import { fetchProducts, fetchProductByHandle, ShopifyProduct } from "@/lib/shopify";
 import { useCartStore } from "@/stores/cartStore";
+import { ProductCard } from "@/components/products/ProductCard";
 import { toast } from "sonner";
 
 interface ProductNode {
@@ -55,22 +56,34 @@ interface ProductNode {
 const ProductDetailPage = () => {
   const { handle } = useParams<{ handle: string }>();
   const [product, setProduct] = useState<ProductNode | null>(null);
+  const [relatedProducts, setRelatedProducts] = useState<ShopifyProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedVariant, setSelectedVariant] = useState<ProductNode["variants"]["edges"][0]["node"] | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  
   const addItem = useCartStore(state => state.addItem);
+  const createCheckout = useCartStore(state => state.createCheckout);
 
   useEffect(() => {
     const loadProduct = async () => {
       if (!handle) return;
       
       try {
-        const data = await fetchProductByHandle(handle);
-        setProduct(data);
-        if (data?.variants.edges[0]) {
-          setSelectedVariant(data.variants.edges[0].node);
+        const [productData, allProducts] = await Promise.all([
+          fetchProductByHandle(handle),
+          fetchProducts(5)
+        ]);
+        
+        setProduct(productData);
+        if (productData?.variants.edges[0]) {
+          setSelectedVariant(productData.variants.edges[0].node);
         }
+        
+        // Filter out current product for related products
+        const related = allProducts.filter(p => p.node.handle !== handle).slice(0, 4);
+        setRelatedProducts(related);
       } catch (error) {
         console.error("Failed to load product:", error);
       } finally {
@@ -79,6 +92,8 @@ const ProductDetailPage = () => {
     };
 
     loadProduct();
+    setSelectedImage(0);
+    setQuantity(1);
   }, [handle]);
 
   const handleAddToCart = () => {
@@ -97,6 +112,33 @@ const ProductDetailPage = () => {
       description: `${quantity}x ${product.title}`,
       position: "top-center",
     });
+  };
+
+  const handleBuyNow = async () => {
+    if (!product || !selectedVariant) return;
+
+    // First add to cart
+    addItem({
+      product: { node: product },
+      variantId: selectedVariant.id,
+      variantTitle: selectedVariant.title,
+      price: selectedVariant.price,
+      quantity,
+      selectedOptions: selectedVariant.selectedOptions || [],
+    });
+
+    setIsCheckingOut(true);
+    try {
+      const checkoutUrl = await createCheckout();
+      if (checkoutUrl) {
+        window.open(checkoutUrl, '_blank');
+      }
+    } catch (error) {
+      console.error("Checkout failed:", error);
+      toast.error("Failed to create checkout");
+    } finally {
+      setIsCheckingOut(false);
+    }
   };
 
   if (loading) {
@@ -134,7 +176,7 @@ const ProductDetailPage = () => {
   return (
     <>
       <Helmet>
-        <title>{product.title} | VELORA</title>
+        <title>{product.title} | MyxelHome</title>
         <meta name="description" content={product.description.slice(0, 160)} />
       </Helmet>
 
@@ -154,7 +196,7 @@ const ProductDetailPage = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
             {/* Images */}
             <div className="space-y-4">
-              <div className="aspect-square bg-secondary rounded-sm overflow-hidden">
+              <div className="aspect-square bg-secondary rounded-lg overflow-hidden">
                 {images[selectedImage]?.node ? (
                   <img
                     src={images[selectedImage].node.url}
@@ -174,7 +216,7 @@ const ProductDetailPage = () => {
                     <button
                       key={index}
                       onClick={() => setSelectedImage(index)}
-                      className={`w-20 h-20 flex-shrink-0 rounded-sm overflow-hidden border-2 transition-colors ${
+                      className={`w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden border-2 transition-colors ${
                         selectedImage === index ? "border-foreground" : "border-transparent"
                       }`}
                     >
@@ -189,17 +231,13 @@ const ProductDetailPage = () => {
               )}
             </div>
 
-            {/* Info */}
+            {/* Product Info */}
             <div>
               <h1 className="velora-heading-md mb-4">{product.title}</h1>
               
-              <p className="text-2xl font-medium mb-6">
-                {price.currencyCode} {parseFloat(price.amount).toFixed(2)}
+              <p className="text-3xl font-semibold mb-6">
+                ${parseFloat(price.amount).toFixed(2)} <span className="text-lg text-muted-foreground font-normal">USD</span>
               </p>
-
-              {product.description && (
-                <p className="velora-body mb-8">{product.description}</p>
-              )}
 
               {/* Variants */}
               {product.options.map((option) => {
@@ -225,7 +263,7 @@ const ProductDetailPage = () => {
                             key={value}
                             onClick={() => variant && setSelectedVariant(variant)}
                             disabled={!variant?.availableForSale}
-                            className={`px-4 py-2 text-sm border rounded-sm transition-colors ${
+                            className={`px-4 py-2 text-sm border rounded-lg transition-colors ${
                               isSelected
                                 ? "border-foreground bg-foreground text-background"
                                 : "border-border hover:border-foreground"
@@ -241,7 +279,7 @@ const ProductDetailPage = () => {
               })}
 
               {/* Quantity */}
-              <div className="mb-8">
+              <div className="mb-6">
                 <p className="text-sm font-medium mb-3">Quantity</p>
                 <div className="flex items-center gap-4">
                   <Button
@@ -262,49 +300,94 @@ const ProductDetailPage = () => {
                 </div>
               </div>
 
-              {/* Add to Cart */}
-              <Button
-                onClick={handleAddToCart}
-                size="lg"
-                className="w-full mb-8"
-                disabled={!selectedVariant?.availableForSale}
-              >
-                {selectedVariant?.availableForSale ? "Add to Cart" : "Out of Stock"}
-              </Button>
+              {/* Action Buttons */}
+              <div className="space-y-3 mb-8">
+                <Button
+                  onClick={handleBuyNow}
+                  size="lg"
+                  className="w-full"
+                  disabled={!selectedVariant?.availableForSale || isCheckingOut}
+                >
+                  {isCheckingOut ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="w-4 h-4 mr-2" />
+                      Buy Now — ${(parseFloat(price.amount) * quantity).toFixed(2)}
+                    </>
+                  )}
+                </Button>
+                
+                <Button
+                  onClick={handleAddToCart}
+                  variant="outline"
+                  size="lg"
+                  className="w-full"
+                  disabled={!selectedVariant?.availableForSale}
+                >
+                  <ShoppingBag className="w-4 h-4 mr-2" />
+                  {selectedVariant?.availableForSale ? "Add to Cart" : "Out of Stock"}
+                </Button>
+              </div>
 
               {/* Trust badges */}
-              <div className="grid grid-cols-2 gap-4 pt-8 border-t border-border/50">
+              <div className="grid grid-cols-2 gap-4 p-6 bg-secondary/30 rounded-lg">
                 <div className="flex items-start gap-3">
-                  <Truck className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                  <Truck className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm font-medium">Free Shipping</p>
-                    <p className="text-xs text-muted-foreground">Worldwide delivery</p>
+                    <p className="text-sm font-medium">Free USA Shipping</p>
+                    <p className="text-xs text-muted-foreground">2-5 business days</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <RefreshCw className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                  <RefreshCw className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="text-sm font-medium">30-Day Returns</p>
                     <p className="text-xs text-muted-foreground">Risk-free guarantee</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <Shield className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                  <Shield className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="text-sm font-medium">Secure Checkout</p>
                     <p className="text-xs text-muted-foreground">Encrypted payment</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <Check className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                  <Check className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="text-sm font-medium">Premium Quality</p>
-                    <p className="text-xs text-muted-foreground">Carefully selected</p>
+                    <p className="text-xs text-muted-foreground">100% guaranteed</p>
                   </div>
                 </div>
               </div>
             </div>
           </div>
+
+          {/* Product Description */}
+          {product.description && (
+            <div className="mt-16 pt-16 border-t border-border/50">
+              <h2 className="velora-heading-sm mb-6">Product Description</h2>
+              <div className="prose prose-neutral max-w-none">
+                <p className="velora-body whitespace-pre-line">{product.description}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Related Products */}
+          {relatedProducts.length > 0 && (
+            <div className="mt-16 pt-16 border-t border-border/50">
+              <h2 className="velora-heading-sm mb-8">You May Also Like</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+                {relatedProducts.map((product) => (
+                  <ProductCard key={product.node.id} product={product} />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </main>
 

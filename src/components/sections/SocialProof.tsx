@@ -4,23 +4,23 @@ const SocialProof = () => {
   const testimonials = [
     {
       id: 1,
-      text: "The quality exceeded my expectations. Every detail feels intentional and well-crafted.",
-      author: "Sarah M.",
-      location: "New York",
+      text: "The levitating clock is absolutely stunning! It's become the centerpiece of my living room. Amazing quality.",
+      author: "Michael R.",
+      location: "California, USA",
       rating: 5,
     },
     {
       id: 2,
-      text: "Finally found a brand that matches my aesthetic. Minimalist, functional, and beautiful.",
-      author: "James L.",
-      location: "London",
+      text: "Best humidifier I've ever owned. The rain sounds are so relaxing and the night light is perfect.",
+      author: "Jennifer S.",
+      location: "Texas, USA",
       rating: 5,
     },
     {
       id: 3,
-      text: "Fast shipping and excellent customer service. Will definitely be ordering again.",
-      author: "Emma K.",
-      location: "Toronto",
+      text: "Fast shipping and the jellyfish lamp exceeded my expectations. My kids absolutely love it!",
+      author: "David K.",
+      location: "Florida, USA",
       rating: 5,
     },
   ];
@@ -31,13 +31,13 @@ const SocialProof = () => {
         {/* Header */}
         <div className="text-center mb-12 lg:mb-16">
           <p className="text-xs tracking-[0.3em] uppercase text-muted-foreground mb-3">
-            Reviews
+            Customer Reviews
           </p>
           <h2 className="velora-heading-lg mb-4">
-            Trusted by Customers Worldwide
+            Loved by Thousands
           </h2>
           <p className="velora-body max-w-xl mx-auto">
-            Thousands of customers choose Velora for timeless design and reliable quality.
+            Join over 10,000 happy customers who have transformed their homes with MyxelHome.
           </p>
         </div>
 
@@ -46,14 +46,14 @@ const SocialProof = () => {
           {testimonials.map((testimonial) => (
             <article
               key={testimonial.id}
-              className="bg-secondary/50 rounded-sm p-8 hover:bg-secondary transition-colors duration-smooth"
+              className="bg-secondary/50 rounded-lg p-8 hover:bg-secondary transition-colors duration-smooth"
             >
               {/* Rating */}
               <div className="flex gap-0.5 mb-4">
                 {[...Array(testimonial.rating)].map((_, i) => (
                   <Star
                     key={i}
-                    className="w-4 h-4 fill-foreground text-foreground"
+                    className="w-4 h-4 fill-accent text-accent"
                   />
                 ))}
               </div>
@@ -80,13 +80,13 @@ const SocialProof = () => {
             <div className="flex items-center gap-2">
               <div className="flex gap-0.5">
                 {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="w-3.5 h-3.5 fill-current" />
+                  <Star key={i} className="w-3.5 h-3.5 fill-accent text-accent" />
                 ))}
               </div>
               <span className="text-sm">4.9/5 Average Rating</span>
             </div>
-            <span className="text-sm">2,500+ Reviews</span>
-            <span className="text-sm">Verified Customers</span>
+            <span className="text-sm">10,000+ Customers</span>
+            <span className="text-sm">🇺🇸 Ships from USA</span>
           </div>
         </div>
       </div>

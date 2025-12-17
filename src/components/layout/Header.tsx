@@ -11,7 +11,6 @@ const Header = () => {
     { label: "Shop", href: "/shop" },
     { label: "Collections", href: "/collections" },
     { label: "About", href: "/#about" },
-    { label: "Contact", href: "/#contact" },
   ];
 
   return (
@@ -30,21 +29,21 @@ const Header = () => {
 
           {/* Logo */}
           <Link to="/" className="flex items-center">
-            <span className="text-xl lg:text-2xl font-semibold tracking-[0.2em] uppercase">
-              Velora
+            <span className="text-xl lg:text-2xl font-semibold tracking-[0.15em]">
+              MyxelHome
             </span>
           </Link>
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center gap-10">
             {navLinks.map((link) => (
-              <a
+              <Link
                 key={link.label}
-                href={link.href}
+                to={link.href}
                 className="text-sm tracking-wide text-muted-foreground hover:text-foreground transition-colors duration-smooth"
               >
                 {link.label}
-              </a>
+              </Link>
             ))}
           </nav>
 
@@ -62,14 +61,14 @@ const Header = () => {
           <nav className="lg:hidden py-6 border-t border-border/50 animate-fade-in">
             <div className="flex flex-col gap-4">
               {navLinks.map((link) => (
-                <a
+                <Link
                   key={link.label}
-                  href={link.href}
+                  to={link.href}
                   className="text-sm tracking-wide text-muted-foreground hover:text-foreground transition-colors py-2"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   {link.label}
-                </a>
+                </Link>
               ))}
             </div>
           </nav>

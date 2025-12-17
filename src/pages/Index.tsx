@@ -13,13 +13,13 @@ const Index = () => {
   return (
     <>
       <Helmet>
-        <title>VELORA — Designed for Modern Living</title>
+        <title>MyxelHome — Innovative Smart Home Technology</title>
         <meta
           name="description"
-          content="Discover thoughtfully designed essentials that blend function, comfort, and modern aesthetics. Free worldwide shipping on all orders."
+          content="Transform your living space with innovative smart home gadgets. Levitating clocks, ambient lighting, humidifiers & more. Free shipping to USA."
         />
-        <meta name="keywords" content="modern design, minimalist, lifestyle, home essentials, premium quality" />
-        <link rel="canonical" href="https://velora.com" />
+        <meta name="keywords" content="smart home, ambient lighting, levitating clock, home decor, humidifier, modern gadgets" />
+        <link rel="canonical" href="https://myxelhome.com" />
       </Helmet>
 
       <div className="min-h-screen bg-background">

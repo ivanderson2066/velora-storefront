@@ -5,52 +5,52 @@ const BrandStory = () => {
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
           {/* Image */}
           <div className="relative">
-            <div className="aspect-[4/5] bg-velora-sand/30 rounded-sm overflow-hidden">
+            <div className="aspect-[4/5] bg-gradient-to-br from-accent/10 to-secondary rounded-lg overflow-hidden">
               <img
-                src="https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=800&q=80"
-                alt="Minimalist workspace with carefully curated items"
+                src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80"
+                alt="Smart home technology"
                 className="w-full h-full object-cover"
               />
             </div>
             {/* Accent element */}
-            <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-velora-beige rounded-sm hidden lg:block" />
+            <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-accent/20 rounded-lg hidden lg:block" />
           </div>
 
           {/* Content */}
           <div className="lg:pl-8">
             <p className="text-xs tracking-[0.3em] uppercase text-muted-foreground mb-4">
-              Our Philosophy
+              About MyxelHome
             </p>
             <h2 className="velora-heading-lg mb-6">
-              Designed With
+              Innovation Meets
               <br />
-              Purpose
+              Design
             </h2>
             <div className="space-y-4">
               <p className="velora-body">
-                At Velora, we believe everyday products should feel intentional.
+                At MyxelHome, we believe technology should enhance your life without compromising on aesthetics.
               </p>
               <p className="velora-body">
-                Each item in our collection is selected for its design, functionality, and ability to simplify modern life — without compromising style.
+                Each product in our collection is carefully selected for its innovative features, premium quality, and ability to transform everyday spaces into extraordinary experiences.
               </p>
               <p className="velora-body">
-                We partner with artisans and manufacturers who share our commitment to quality, sustainability, and thoughtful craftsmanship.
+                From levitating displays to ambient lighting systems, we bring you the future of smart home living — designed for the modern American home.
               </p>
             </div>
 
             {/* Stats */}
             <div className="grid grid-cols-3 gap-6 mt-10 pt-10 border-t border-border/50">
               <div>
-                <p className="text-2xl font-semibold mb-1">50+</p>
-                <p className="text-xs text-muted-foreground">Curated Products</p>
+                <p className="text-2xl font-semibold mb-1">7+</p>
+                <p className="text-xs text-muted-foreground">Premium Products</p>
               </div>
               <div>
-                <p className="text-2xl font-semibold mb-1">12k+</p>
+                <p className="text-2xl font-semibold mb-1">10k+</p>
                 <p className="text-xs text-muted-foreground">Happy Customers</p>
               </div>
               <div>
-                <p className="text-2xl font-semibold mb-1">30+</p>
-                <p className="text-xs text-muted-foreground">Countries Shipped</p>
+                <p className="text-2xl font-semibold mb-1">USA</p>
+                <p className="text-xs text-muted-foreground">Based Shipping</p>
               </div>
             </div>
           </div>
