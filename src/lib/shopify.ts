@@ -5,6 +5,11 @@ const SHOPIFY_STORE_PERMANENT_DOMAIN = 'fwd9jn-1p.myshopify.com';
 const SHOPIFY_STOREFRONT_URL = `https://${SHOPIFY_STORE_PERMANENT_DOMAIN}/api/${SHOPIFY_API_VERSION}/graphql.json`;
 const SHOPIFY_STOREFRONT_TOKEN = 'b0159fe69afa12edfae41b61b04553f5';
 
+export interface ProductReview {
+  rating: number;
+  ratingCount: number;
+}
+
 export interface ShopifyProduct {
   node: {
     id: string;
@@ -51,6 +56,12 @@ export interface ShopifyProduct {
       name: string;
       values: string[];
     }>;
+    reviewRating?: {
+      value: string;
+    };
+    reviewCount?: {
+      value: string;
+    };
   };
 }
 
@@ -136,6 +147,12 @@ const PRODUCTS_QUERY = `
             name
             values
           }
+          reviewRating: metafield(namespace: "reviews", key: "rating") {
+            value
+          }
+          reviewCount: metafield(namespace: "reviews", key: "rating_count") {
+            value
+          }
         }
       }
     }
@@ -189,9 +206,34 @@ const PRODUCT_BY_HANDLE_QUERY = `
         name
         values
       }
+      reviewRating: metafield(namespace: "reviews", key: "rating") {
+        value
+      }
+      reviewCount: metafield(namespace: "reviews", key: "rating_count") {
+        value
+      }
     }
   }
 `;
+
+// Helper to parse Judge.me review data
+export function parseReviewData(product: ShopifyProduct['node'] | { reviewRating?: { value: string }; reviewCount?: { value: string } }): ProductReview | null {
+  if (!product.reviewRating?.value || !product.reviewCount?.value) {
+    return null;
+  }
+  
+  try {
+    const ratingData = JSON.parse(product.reviewRating.value);
+    const rating = ratingData.value || 0;
+    const ratingCount = parseInt(product.reviewCount.value) || 0;
+    
+    if (ratingCount === 0) return null;
+    
+    return { rating, ratingCount };
+  } catch {
+    return null;
+  }
+}
 
 export async function fetchProducts(first: number = 50, query?: string): Promise<ShopifyProduct[]> {
   const data = await storefrontApiRequest(PRODUCTS_QUERY, { first, query });

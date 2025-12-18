@@ -6,9 +6,10 @@ import AnnouncementBar from "@/components/layout/AnnouncementBar";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
-import { fetchProducts, fetchProductByHandle, ShopifyProduct } from "@/lib/shopify";
+import { fetchProducts, fetchProductByHandle, ShopifyProduct, parseReviewData } from "@/lib/shopify";
 import { useCartStore } from "@/stores/cartStore";
 import { ProductCard } from "@/components/products/ProductCard";
+import { StarRating } from "@/components/products/StarRating";
 import { toast } from "sonner";
 
 interface ProductNode {
@@ -56,6 +57,12 @@ interface ProductNode {
     name: string;
     values: string[];
   }>;
+  reviewRating?: {
+    value: string;
+  };
+  reviewCount?: {
+    value: string;
+  };
 }
 
 const ProductDetailPage = () => {
@@ -252,7 +259,17 @@ const ProductDetailPage = () => {
 
             {/* Product Info */}
             <div>
-              <h1 className="velora-heading-md mb-4">{product.title}</h1>
+              <h1 className="velora-heading-md mb-2">{product.title}</h1>
+              
+              {/* Review Rating */}
+              {(() => {
+                const review = parseReviewData(product);
+                return review ? (
+                  <div className="mb-4">
+                    <StarRating rating={review.rating} count={review.ratingCount} size="md" />
+                  </div>
+                ) : null;
+              })()}
               
               <p className="text-3xl font-semibold mb-6">
                 ${parseFloat(price.amount).toFixed(2)} <span className="text-lg text-muted-foreground font-normal">USD</span>

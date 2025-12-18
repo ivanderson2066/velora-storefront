@@ -1,9 +1,10 @@
 import { Link } from "react-router-dom";
-import { ShopifyProduct } from "@/lib/shopify";
+import { ShopifyProduct, parseReviewData } from "@/lib/shopify";
 import { useCartStore } from "@/stores/cartStore";
 import { Button } from "@/components/ui/button";
 import { ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
+import { StarRating } from "./StarRating";
 
 interface ProductCardProps {
   product: ShopifyProduct;
@@ -16,6 +17,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
   const image = node.images.edges[0]?.node;
   const price = node.priceRange.minVariantPrice;
   const firstVariant = node.variants.edges[0]?.node;
+  const review = parseReviewData(node);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -69,9 +71,14 @@ export const ProductCard = ({ product }: ProductCardProps) => {
         </div>
 
         <div>
-          <h3 className="text-sm font-medium mb-2 group-hover:text-muted-foreground transition-colors line-clamp-2">
+          <h3 className="text-sm font-medium mb-1 group-hover:text-muted-foreground transition-colors line-clamp-2">
             {node.title}
           </h3>
+          {review && (
+            <div className="mb-1.5">
+              <StarRating rating={review.rating} count={review.ratingCount} size="sm" />
+            </div>
+          )}
           <div className="flex items-baseline gap-1">
             <span className="text-lg font-semibold">
               ${parseFloat(price.amount).toFixed(2)}
