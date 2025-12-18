@@ -10,7 +10,7 @@ const Footer = () => {
   ];
 
   const infoLinks = [
-    { label: "About Us", href: "/#about" },
+    { label: "About Us", href: "/about" },
     { label: "Shipping Policy", href: "/shipping" },
     { label: "Refund Policy", href: "/refunds" },
     { label: "Contact", href: "/contact" },

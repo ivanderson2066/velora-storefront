@@ -297,3 +297,50 @@ export async function createStorefrontCheckout(items: Array<{ variantId: string;
   url.searchParams.set('channel', 'online_store');
   return url.toString();
 }
+
+// Shop Policies Query
+const SHOP_POLICIES_QUERY = `
+  query GetShopPolicies {
+    shop {
+      privacyPolicy {
+        body
+        title
+        handle
+      }
+      refundPolicy {
+        body
+        title
+        handle
+      }
+      shippingPolicy {
+        body
+        title
+        handle
+      }
+      termsOfService {
+        body
+        title
+        handle
+      }
+    }
+  }
+`;
+
+export interface ShopPolicy {
+  body: string;
+  title: string;
+  handle: string;
+}
+
+export interface ShopPolicies {
+  privacyPolicy: ShopPolicy | null;
+  refundPolicy: ShopPolicy | null;
+  shippingPolicy: ShopPolicy | null;
+  termsOfService: ShopPolicy | null;
+}
+
+export async function fetchShopPolicies(): Promise<ShopPolicies | null> {
+  const data = await storefrontApiRequest(SHOP_POLICIES_QUERY);
+  if (!data) return null;
+  return data.data.shop;
+}

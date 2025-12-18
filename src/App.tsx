@@ -10,6 +10,9 @@ import NotFound from "./pages/NotFound";
 import ShopPage from "./pages/ShopPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
 import CollectionsPage from "./pages/CollectionsPage";
+import ContactPage from "./pages/ContactPage";
+import AboutPage from "./pages/AboutPage";
+import PolicyPage from "./pages/PolicyPage";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +30,12 @@ const App = () => (
             <Route path="/product/:handle" element={<ProductDetailPage />} />
             <Route path="/collections" element={<CollectionsPage />} />
             <Route path="/collections/:collectionId" element={<CollectionsPage />} />
+            <Route path="/contact" element={<ContactPage />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/privacy" element={<PolicyPage />} />
+            <Route path="/refunds" element={<PolicyPage />} />
+            <Route path="/shipping" element={<PolicyPage />} />
+            <Route path="/terms" element={<PolicyPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

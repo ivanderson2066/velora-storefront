@@ -10,6 +10,7 @@ import { fetchProducts, fetchProductByHandle, ShopifyProduct, parseReviewData } 
 import { useCartStore } from "@/stores/cartStore";
 import { ProductCard } from "@/components/products/ProductCard";
 import { StarRating } from "@/components/products/StarRating";
+import { JudgeMeReviews } from "@/components/products/JudgeMeReviews";
 import { toast } from "sonner";
 
 interface ProductNode {
@@ -419,6 +420,9 @@ const ProductDetailPage = () => {
               </div>
             </div>
           )}
+
+          {/* Customer Reviews - Judge.me Widget */}
+          <JudgeMeReviews productId={product.id} />
 
           {/* Related Products */}
           {relatedProducts.length > 0 && (
