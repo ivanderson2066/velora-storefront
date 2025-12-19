@@ -4,19 +4,20 @@ import { Instagram, Facebook, Twitter } from "lucide-react";
 const Footer = () => {
   const shopLinks = [
     { label: "All Products", href: "/shop" },
-    { label: "Ambient Lighting", href: "/collections/lighting" },
-    { label: "Smart Home", href: "/collections/smart-home" },
+    { label: "Smart Lighting", href: "/collections/lighting" },
+    { label: "Home Comfort", href: "/collections/home-comfort" },
     { label: "Car Accessories", href: "/collections/car" },
   ];
 
   const infoLinks = [
     { label: "About Us", href: "/about" },
-    { label: "Shipping Policy", href: "/shipping" },
-    { label: "Refund Policy", href: "/refunds" },
+    { label: "FAQ", href: "/faq" },
     { label: "Contact", href: "/contact" },
   ];
 
-  const legalLinks = [
+  const policyLinks = [
+    { label: "Shipping Policy", href: "/shipping-policy" },
+    { label: "Refund Policy", href: "/refund-policy" },
     { label: "Privacy Policy", href: "/privacy" },
     { label: "Terms of Service", href: "/terms" },
   ];
@@ -31,7 +32,8 @@ const Footer = () => {
               MyxelHome
             </h3>
             <p className="text-sm text-primary-foreground/70 leading-relaxed mb-6">
-              Innovative smart home technology that transforms your living space. Elevate your everyday with premium quality gadgets.
+              Innovative smart home technology that transforms your living space. 
+              Elevate your everyday with premium quality gadgets designed for modern life.
             </p>
             <div className="flex items-center gap-4">
               <a
@@ -39,6 +41,7 @@ const Footer = () => {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary-foreground/70 hover:text-primary-foreground transition-colors"
+                aria-label="Instagram"
               >
                 <Instagram className="w-5 h-5" />
               </a>
@@ -47,6 +50,7 @@ const Footer = () => {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary-foreground/70 hover:text-primary-foreground transition-colors"
+                aria-label="Facebook"
               >
                 <Facebook className="w-5 h-5" />
               </a>
@@ -55,6 +59,7 @@ const Footer = () => {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary-foreground/70 hover:text-primary-foreground transition-colors"
+                aria-label="Twitter"
               >
                 <Twitter className="w-5 h-5" />
               </a>
@@ -83,7 +88,7 @@ const Footer = () => {
           {/* Info */}
           <div>
             <h4 className="text-xs font-semibold tracking-[0.15em] uppercase mb-4">
-              Information
+              Company
             </h4>
             <ul className="space-y-3">
               {infoLinks.map((link) => (
@@ -99,13 +104,13 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* Legal */}
+          {/* Policies */}
           <div>
             <h4 className="text-xs font-semibold tracking-[0.15em] uppercase mb-4">
-              Legal
+              Policies
             </h4>
             <ul className="space-y-3">
-              {legalLinks.map((link) => (
+              {policyLinks.map((link) => (
                 <li key={link.label}>
                   <Link
                     to={link.href}
@@ -123,7 +128,7 @@ const Footer = () => {
         <div className="mt-16 pt-8 border-t border-primary-foreground/10">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-xs text-primary-foreground/50">
-              © {new Date().getFullYear()} MyxelHome. All rights reserved.
+              © 2025 MyxelHome. All rights reserved.
             </p>
             <div className="flex items-center gap-6">
               <span className="text-xs text-primary-foreground/50">

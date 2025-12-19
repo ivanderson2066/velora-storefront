@@ -422,15 +422,17 @@ const ProductDetailPage = () => {
           )}
 
           {/* Customer Reviews - Judge.me Widget */}
-          <JudgeMeReviews productId={product.id} />
+          <JudgeMeReviews productId={product.id} productTitle={product.title} />
 
           {/* Related Products */}
           {relatedProducts.length > 0 && (
             <div className="mt-16 pt-16 border-t border-border/50">
               <h2 className="velora-heading-sm mb-8">You May Also Like</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+              <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide -mx-6 px-6">
                 {relatedProducts.map((product) => (
-                  <ProductCard key={product.node.id} product={product} />
+                  <div key={product.node.id} className="flex-shrink-0 w-[280px] snap-start">
+                    <ProductCard product={product} />
+                  </div>
                 ))}
               </div>
             </div>
