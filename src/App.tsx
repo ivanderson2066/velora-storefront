@@ -13,6 +13,9 @@ import CollectionsPage from "./pages/CollectionsPage";
 import ContactPage from "./pages/ContactPage";
 import AboutPage from "./pages/AboutPage";
 import PolicyPage from "./pages/PolicyPage";
+import FAQPage from "./pages/FAQPage";
+import ShippingPolicyPage from "./pages/ShippingPolicyPage";
+import RefundPolicyPage from "./pages/RefundPolicyPage";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +35,9 @@ const App = () => (
             <Route path="/collections/:collectionId" element={<CollectionsPage />} />
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/about" element={<AboutPage />} />
+            <Route path="/faq" element={<FAQPage />} />
+            <Route path="/shipping-policy" element={<ShippingPolicyPage />} />
+            <Route path="/refund-policy" element={<RefundPolicyPage />} />
             <Route path="/privacy" element={<PolicyPage />} />
             <Route path="/refunds" element={<PolicyPage />} />
             <Route path="/shipping" element={<PolicyPage />} />

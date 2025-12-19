@@ -4,7 +4,7 @@ import { ArrowRight, Sparkles } from "lucide-react";
 
 const HeroSection = () => {
   return (
-    <section className="relative min-h-[85vh] flex items-center bg-gradient-to-br from-secondary/30 via-background to-secondary/20">
+    <section className="relative min-h-[70vh] lg:min-h-[85vh] flex items-center bg-gradient-to-br from-secondary/30 via-background to-secondary/20 py-8 lg:py-0">
       <div className="velora-container w-full">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           {/* Content */}

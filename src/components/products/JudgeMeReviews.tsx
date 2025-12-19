@@ -1,46 +1,43 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 interface JudgeMeReviewsProps {
   productId: string;
+  productTitle?: string;
 }
 
-export const JudgeMeReviews = ({ productId }: JudgeMeReviewsProps) => {
+declare global {
+  interface Window {
+    jdgm?: {
+      SHOP_DOMAIN: string;
+      PLATFORM: string;
+      customWidgetRecall?: () => void;
+    };
+  }
+}
+
+export const JudgeMeReviews = ({ productId, productTitle = "" }: JudgeMeReviewsProps) => {
+  const containerRef = useRef<HTMLDivElement>(null);
   // Extract numeric ID from Shopify GraphQL ID
   const numericId = productId.replace('gid://shopify/Product/', '');
 
   useEffect(() => {
-    // Load Judge.me widget script
-    const existingScript = document.getElementById('judgeme-widget-script');
-    if (!existingScript) {
-      const script = document.createElement('script');
-      script.id = 'judgeme-widget-script';
-      script.src = 'https://cdn.judge.me/widget_preloader.js';
-      script.async = true;
-      document.head.appendChild(script);
-    }
+    // Force Judge.me to re-render on route change
+    const timer = setTimeout(() => {
+      if (window.jdgm?.customWidgetRecall) {
+        window.jdgm.customWidgetRecall();
+      }
+    }, 500);
 
-    // Initialize Judge.me for this product
-    const initScript = document.createElement('script');
-    initScript.innerHTML = `
-      window.jdgm = window.jdgm || {};
-      window.jdgm.SHOP_DOMAIN = 'fwd9jn-1p.myshopify.com';
-      window.jdgm.PLATFORM = 'shopify';
-      window.jdgm.PUBLIC_TOKEN = '';
-    `;
-    document.head.appendChild(initScript);
-
-    return () => {
-      initScript.remove();
-    };
-  }, [productId]);
+    return () => clearTimeout(timer);
+  }, [productId, numericId]);
 
   return (
-    <div className="mt-16 pt-16 border-t border-border/50">
+    <div className="mt-16 pt-16 border-t border-border/50" ref={containerRef}>
       <h2 className="velora-heading-sm mb-8">Customer Reviews</h2>
       <div 
         className="jdgm-widget jdgm-review-widget" 
         data-id={numericId}
-        data-product-title=""
+        data-product-title={productTitle}
       />
     </div>
   );
