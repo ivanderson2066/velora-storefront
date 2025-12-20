@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import AnnouncementBar from "@/components/layout/AnnouncementBar";
 import Header from "@/components/layout/Header";
@@ -183,12 +184,12 @@ const FAQPage = () => {
             <p className="text-primary-foreground/70 mb-8 max-w-xl mx-auto">
               Our customer support team is available 7 days a week to help you with any questions or concerns.
             </p>
-            <a 
-              href="/contact" 
+            <Link 
+              to="/contact" 
               className="inline-flex items-center justify-center px-8 py-3 bg-background text-foreground font-medium rounded-lg hover:bg-background/90 transition-colors"
             >
               Contact Support
-            </a>
+            </Link>
           </div>
         </section>
       </main>

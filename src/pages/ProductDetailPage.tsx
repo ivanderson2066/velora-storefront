@@ -467,10 +467,16 @@ const ProductDetailPage = () => {
           {(product.descriptionHtml || product.description) && (
             <div className="mt-16 pt-16 border-t border-border/50">
               <h2 className="velora-heading-sm mb-6">Product Description</h2>
-              <div className="prose prose-neutral max-w-none">
+              <div className="prose prose-neutral dark:prose-invert max-w-none">
                 {product.descriptionHtml ? (
                   <div
-                    className="velora-body [&_img]:rounded-lg [&_img]:my-6 [&_img]:w-full [&_img]:max-w-2xl [&_img]:mx-auto"
+                    className="velora-body 
+                      [&_img]:rounded-xl [&_img]:my-8 [&_img]:w-full [&_img]:max-w-xl [&_img]:mx-auto [&_img]:shadow-lg
+                      [&_p]:mb-4 [&_p]:leading-relaxed
+                      [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:mb-4 [&_ul]:space-y-2
+                      [&_li]:text-muted-foreground
+                      [&_strong]:text-foreground [&_strong]:font-semibold
+                      [&_b]:text-foreground [&_b]:font-semibold"
                     dangerouslySetInnerHTML={{ __html: product.descriptionHtml }}
                   />
                 ) : (

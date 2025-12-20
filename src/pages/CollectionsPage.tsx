@@ -19,24 +19,24 @@ interface Collection {
 const collections: Collection[] = [
   {
     id: "lighting",
-    name: "Ambient Lighting",
+    name: "Smart Lighting",
     description: "Create the perfect atmosphere with our innovative lighting solutions.",
     image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80",
-    query: "product_type:Home Decor",
+    query: "tag:lighting OR title:lamp OR title:light",
   },
   {
-    id: "smart-home",
-    name: "Smart Home",
-    description: "Intelligent gadgets that make everyday life easier.",
+    id: "home-comfort",
+    name: "Home Comfort",
+    description: "Intelligent gadgets that make everyday life more comfortable and relaxing.",
     image: "https://images.unsplash.com/photo-1558002038-1055907df827?w=800&q=80",
-    query: "product_type:Smart Home OR product_type:Humidifier",
+    query: "tag:home OR title:humidifier OR title:diffuser OR title:clock",
   },
   {
     id: "car",
     name: "Car Accessories",
     description: "Premium accessories for your vehicle.",
     image: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&q=80",
-    query: "product_type:Car Accessories",
+    query: "tag:car OR product_type:Car",
   },
 ];
 
