@@ -15,8 +15,8 @@ export const ProductCard = ({ product }: ProductCardProps) => {
   const { node } = product;
   
   const image = node.images.edges[0]?.node;
-  const price = node.priceRange.minVariantPrice;
   const firstVariant = node.variants.edges[0]?.node;
+  const price = firstVariant?.price ?? node.priceRange.minVariantPrice;
   const review = parseReviewData(node);
 
   const handleAddToCart = (e: React.MouseEvent) => {

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { ShopifyProduct, createStorefrontCheckout } from '@/lib/shopify';
+import { ShopifyProduct, createStorefrontCheckout, fetchVariantPrices } from '@/lib/shopify';
 
 export interface CartItem {
   product: ShopifyProduct;
@@ -29,6 +29,7 @@ interface CartStore {
   getTotalItems: () => number;
   getTotalPrice: () => number;
   createCheckout: () => Promise<string | null>;
+  syncPrices: () => Promise<void>;
 }
 
 export const useCartStore = create<CartStore>()(
@@ -51,6 +52,38 @@ export const useCartStore = create<CartStore>()(
           });
         } else {
           set({ items: [...items, item] });
+        }
+      },
+
+      // Sync prices with Shopify for all items currently in cart
+      syncPrices: async () => {
+        const { items, setLoading } = get();
+        if (items.length === 0) return;
+
+        setLoading(true);
+        try {
+          const ids = items.map(i => i.variantId);
+          const prices = await fetchVariantPrices(ids);
+
+          set({
+            items: get().items.map(item => {
+              const latest = prices[item.variantId];
+              if (latest) {
+                return {
+                  ...item,
+                  price: {
+                    amount: latest.amount,
+                    currencyCode: latest.currencyCode,
+                  }
+                };
+              }
+              return item;
+            })
+          });
+        } catch (e) {
+          console.error('Failed to sync prices:', e);
+        } finally {
+          setLoading(false);
         }
       },
 
@@ -84,7 +117,15 @@ export const useCartStore = create<CartStore>()(
       },
 
       getTotalPrice: () => {
-        return get().items.reduce((sum, item) => sum + (parseFloat(item.price.amount) * item.quantity), 0);
+        return get().items.reduce((sum, item) => {
+          try {
+            const variant = item.product.node.variants?.edges?.find(v => v.node.id === item.variantId)?.node;
+            const amount = variant?.price?.amount ?? item.price.amount;
+            return sum + (parseFloat(amount) * item.quantity);
+          } catch (e) {
+            return sum + (parseFloat(item.price.amount) * item.quantity);
+          }
+        }, 0);
       },
 
       createCheckout: async () => {

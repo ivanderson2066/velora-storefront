@@ -13,6 +13,8 @@ import CollectionsPage from "./pages/CollectionsPage";
 import ContactPage from "./pages/ContactPage";
 import AboutPage from "./pages/AboutPage";
 import PolicyPage from "./pages/PolicyPage";
+import TermsPage from "./pages/TermsPage";
+import { Navigate } from "react-router-dom";
 import FAQPage from "./pages/FAQPage";
 import ShippingPolicyPage from "./pages/ShippingPolicyPage";
 import RefundPolicyPage from "./pages/RefundPolicyPage";
@@ -41,7 +43,8 @@ const App = () => (
             <Route path="/privacy" element={<PolicyPage />} />
             <Route path="/refunds" element={<PolicyPage />} />
             <Route path="/shipping" element={<PolicyPage />} />
-            <Route path="/terms" element={<PolicyPage />} />
+            <Route path="/terms" element={<TermsPage />} />
+            <Route path="/terms-of-service" element={<TermsPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

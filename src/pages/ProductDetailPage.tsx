@@ -6,7 +6,7 @@ import AnnouncementBar from "@/components/layout/AnnouncementBar";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
-import { fetchProducts, fetchProductByHandle, ShopifyProduct, parseReviewData } from "@/lib/shopify";
+import { fetchProducts, fetchProductByHandle, ShopifyProduct, parseReviewData, fetchVariantPrices } from "@/lib/shopify";
 import { useCartStore } from "@/stores/cartStore";
 import { ProductCard } from "@/components/products/ProductCard";
 import { StarRating } from "@/components/products/StarRating";
@@ -73,6 +73,8 @@ const ProductDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [selectedVariant, setSelectedVariant] = useState<ProductNode["variants"]["edges"][0]["node"] | null>(null);
   const [quantity, setQuantity] = useState(1);
+  const [latestUnitPrice, setLatestUnitPrice] = useState<number | null>(null);
+  const [latestCurrency, setLatestCurrency] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState(0);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   
@@ -112,6 +114,26 @@ const ProductDetailPage = () => {
   useEffect(() => {
     if (!product || !selectedVariant) return;
 
+    // Fetch latest price for selected variant (defensive, updates button labels)
+    const fetchLatest = async () => {
+      try {
+        const prices = await fetchVariantPrices([selectedVariant.id]);
+        const p = prices[selectedVariant.id];
+        if (p) {
+          setLatestUnitPrice(parseFloat(p.amount));
+          setLatestCurrency(p.currencyCode);
+        } else {
+          setLatestUnitPrice(parseFloat(selectedVariant.price.amount));
+          setLatestCurrency(selectedVariant.price.currencyCode);
+        }
+      } catch (e) {
+        setLatestUnitPrice(parseFloat(selectedVariant.price.amount));
+        setLatestCurrency(selectedVariant.price.currencyCode);
+      }
+    };
+
+    fetchLatest();
+
     if (selectedVariant.image?.url) {
       const imageIndex = product.images.edges.findIndex(
         edge => edge.node.url === selectedVariant.image?.url
@@ -126,11 +148,15 @@ const ProductDetailPage = () => {
   const handleAddToCart = () => {
     if (!product || !selectedVariant) return;
 
+    const priceObj = latestUnitPrice != null && latestCurrency
+      ? { amount: latestUnitPrice.toString(), currencyCode: latestCurrency }
+      : selectedVariant.price;
+
     addItem({
       product: { node: product },
       variantId: selectedVariant.id,
       variantTitle: selectedVariant.title,
-      price: selectedVariant.price,
+      price: priceObj,
       quantity,
       selectedOptions: selectedVariant.selectedOptions || [],
     });
@@ -144,21 +170,38 @@ const ProductDetailPage = () => {
   const handleBuyNow = async () => {
     if (!product || !selectedVariant) return;
 
-    // First add to cart
-    addItem({
-      product: { node: product },
-      variantId: selectedVariant.id,
-      variantTitle: selectedVariant.title,
-      price: selectedVariant.price,
-      quantity,
-      selectedOptions: selectedVariant.selectedOptions || [],
-    });
+    // First ensure we have the latest price for checkout
+    try {
+      const prices = await fetchVariantPrices([selectedVariant.id]);
+      const p = prices[selectedVariant.id];
+      const priceObj = p ? { amount: p.amount, currencyCode: p.currencyCode } : selectedVariant.price;
+
+      addItem({
+        product: { node: product },
+        variantId: selectedVariant.id,
+        variantTitle: selectedVariant.title,
+        price: priceObj,
+        quantity,
+        selectedOptions: selectedVariant.selectedOptions || [],
+      });
+    } catch (e) {
+      // fallback to existing price
+      addItem({
+        product: { node: product },
+        variantId: selectedVariant.id,
+        variantTitle: selectedVariant.title,
+        price: selectedVariant.price,
+        quantity,
+        selectedOptions: selectedVariant.selectedOptions || [],
+      });
+    }
 
     setIsCheckingOut(true);
     try {
       const checkoutUrl = await createCheckout();
       if (checkoutUrl) {
-        window.open(checkoutUrl, '_blank');
+        // Redirecionamento na mesma aba para melhor UX Mobile
+        window.location.href = checkoutUrl;
       }
     } catch (error) {
       console.error("Checkout failed:", error);
@@ -199,6 +242,10 @@ const ProductDetailPage = () => {
 
   const images = product.images.edges;
   const price = selectedVariant?.price || product.priceRange.minVariantPrice;
+  
+  // Lógica Senior de Cálculo de Preço
+  const unitPrice = parseFloat(price.amount);
+  const totalPrice = unitPrice * quantity;
 
   return (
     <>
@@ -272,9 +319,19 @@ const ProductDetailPage = () => {
                 ) : null;
               })()}
               
-              <p className="text-3xl font-semibold mb-6">
-                ${parseFloat(price.amount).toFixed(2)} <span className="text-lg text-muted-foreground font-normal">USD</span>
-              </p>
+              {/* Preço com Atualização Dinâmica */}
+              <div className="mb-6">
+                <p className="text-3xl font-semibold">
+                  ${totalPrice.toFixed(2)} 
+                  <span className="text-lg text-muted-foreground font-normal ml-2">USD</span>
+                </p>
+                {/* Mostra preço unitário apenas se quantidade > 1 para dar contexto */}
+                {quantity > 1 && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Preço unitário: ${unitPrice.toFixed(2)}
+                  </p>
+                )}
+              </div>
 
               {/* Variants */}
               {product.options.map((option) => {
@@ -353,7 +410,7 @@ const ProductDetailPage = () => {
                   ) : (
                     <>
                       <CreditCard className="w-4 h-4 mr-2" />
-                      Buy Now — ${(parseFloat(price.amount) * quantity).toFixed(2)}
+                      Buy Now — ${totalPrice.toFixed(2)}
                     </>
                   )}
                 </Button>
@@ -366,7 +423,9 @@ const ProductDetailPage = () => {
                   disabled={!selectedVariant?.availableForSale}
                 >
                   <ShoppingBag className="w-4 h-4 mr-2" />
-                  {selectedVariant?.availableForSale ? "Add to Cart" : "Out of Stock"}
+                  {selectedVariant?.availableForSale 
+                    ? `Add to Cart — $${totalPrice.toFixed(2)}` 
+                    : "Out of Stock"}
                 </Button>
               </div>
 

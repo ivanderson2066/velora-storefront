@@ -344,3 +344,35 @@ export async function fetchShopPolicies(): Promise<ShopPolicies | null> {
   if (!data) return null;
   return data.data.shop;
 }
+
+// Fetch prices for given variant IDs (GraphQL node lookup)
+export async function fetchVariantPrices(variantIds: string[]): Promise<Record<string, { amount: string; currencyCode: string }>> {
+  if (variantIds.length === 0) return {};
+
+  const VARIANT_QUERY = `
+    query GetVariants($ids: [ID!]!) {
+      nodes(ids: $ids) {
+        ... on ProductVariant {
+          id
+          priceV2 {
+            amount
+            currencyCode
+          }
+        }
+      }
+    }
+  `;
+
+  const data = await storefrontApiRequest(VARIANT_QUERY, { ids: variantIds });
+  if (!data) return {};
+
+  const result: Record<string, { amount: string; currencyCode: string }> = {};
+  for (const node of data.data.nodes) {
+    if (!node) continue;
+    if (node.id && node.priceV2) {
+      result[node.id] = { amount: node.priceV2.amount, currencyCode: node.priceV2.currencyCode };
+    }
+  }
+
+  return result;
+}
