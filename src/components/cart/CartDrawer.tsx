@@ -28,14 +28,14 @@ export const CartDrawer = () => {
   const totalItems = getTotalItems();
   const totalPrice = getTotalPrice();
   const subtotalCurrency = items.length > 0
-    ? (items[0].product.node.variants?.edges?.find(v => v.node.id === items[0].variantId)?.node?.price?.currencyCode ?? items[0].price.currencyCode)
+    ? (items[0]?.product?.node?.variants?.edges?.find(v => v?.node?.id === items[0]?.variantId)?.node?.price?.currencyCode ?? items[0]?.price?.currencyCode ?? 'USD')
     : 'USD';
 
   const handleCheckout = async () => {
     try {
       const checkoutUrl = await createCheckout();
       if (checkoutUrl) {
-        window.open(checkoutUrl, '_blank');
+        window.location.href = checkoutUrl;
         setIsOpen(false);
       } else {
         toast.error("Failed to create checkout");
@@ -93,17 +93,17 @@ export const CartDrawer = () => {
                       return items.map((item) => (
                         <div key={item.variantId} className="flex gap-4 p-3 bg-secondary/30 rounded-sm">
                           <div className="w-20 h-20 bg-secondary rounded-sm overflow-hidden flex-shrink-0">
-                            {item.product.node.images?.edges?.[0]?.node && (
+                            {item.product?.node?.images?.edges?.[0]?.node && (
                               <img
-                                src={item.product.node.images.edges[0].node.url}
-                                alt={item.product.node.title}
+                                src={item.product?.node?.images?.edges?.[0]?.node?.url || ''}
+                                alt={item.product?.node?.title || ''}
                                 className="w-full h-full object-cover"
                               />
                             )}
                           </div>
                           
                           <div className="flex-1 min-w-0">
-                            <h4 className="text-sm font-medium truncate">{item.product.node.title}</h4>
+                            <h4 className="text-sm font-medium truncate">{item.product?.node?.title}</h4>
                             {item.variantTitle !== "Default Title" && (
                               <p className="text-xs text-muted-foreground mt-0.5">
                                 {item.variantTitle}
@@ -111,18 +111,18 @@ export const CartDrawer = () => {
                             )}
                             <p className="text-sm font-medium mt-1">
                               {(() => {
-                                const variant = item.product.node.variants?.edges?.find(v => v.node.id === item.variantId)?.node;
-                                const amount = variant?.price?.amount ?? item.price.amount;
-                                const currency = variant?.price?.currencyCode ?? item.price.currencyCode;
+                                const variant = item.product?.node?.variants?.edges?.find(v => v?.node?.id === item.variantId)?.node;
+                                const amount = variant?.price?.amount ?? item.price?.amount ?? '0';
+                                const currency = variant?.price?.currencyCode ?? item.price?.currencyCode ?? 'USD';
                                 return `${currency} ${parseFloat(amount).toFixed(2)}`;
                               })()}
                             </p>
                             <p className="text-sm text-muted-foreground mt-1">
                               {(() => {
-                                const variant = item.product.node.variants?.edges?.find(v => v.node.id === item.variantId)?.node;
-                                const amount = parseFloat(variant?.price?.amount ?? item.price.amount);
-                                const currency = variant?.price?.currencyCode ?? item.price.currencyCode;
-                                const total = amount * item.quantity;
+                                const variant = item.product?.node?.variants?.edges?.find(v => v?.node?.id === item.variantId)?.node;
+                                const amount = parseFloat(variant?.price?.amount ?? item.price?.amount ?? '0');
+                                const currency = variant?.price?.currencyCode ?? item.price?.currencyCode ?? 'USD';
+                                const total = amount * (item.quantity || 0);
                                 return `${currency} ${total.toFixed(2)} total`;
                               })()}
                             </p>

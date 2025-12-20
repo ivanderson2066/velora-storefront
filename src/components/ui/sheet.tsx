@@ -13,6 +13,12 @@ const SheetClose = SheetPrimitive.Close;
 
 const SheetPortal = SheetPrimitive.Portal;
 
+function getPortalContainer(): HTMLElement | undefined {
+  if (typeof document === "undefined") return undefined;
+  const el = document.getElementById("radix-portal-root");
+  return (el as HTMLElement) ?? document.body;
+}
+
 const SheetOverlay = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Overlay>,
   React.ComponentPropsWithoutRef<typeof SheetPrimitive.Overlay>
@@ -53,7 +59,7 @@ interface SheetContentProps
 
 const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Content>, SheetContentProps>(
   ({ side = "right", className, children, ...props }, ref) => (
-    <SheetPortal>
+    <SheetPortal container={getPortalContainer()}>
       <SheetOverlay />
       <SheetPrimitive.Content ref={ref} className={cn(sheetVariants({ side }), className)} {...props}>
         {children}
