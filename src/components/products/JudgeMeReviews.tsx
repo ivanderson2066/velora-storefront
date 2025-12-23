@@ -1,14 +1,22 @@
-import { Star, Check, User, ThumbsUp, Camera, X, Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { Star, Check, ThumbsUp, Camera, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
-import { parseReviewsCSV, Review } from "@/lib/csvParser";
-import { supabase } from "@/lib/supabase";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
+// Usando caminhos relativos estritos para garantir a resolução
+import { parseReviewsCSV, Review } from "../../lib/csvParser";
+import { supabase } from "../../lib/supabase";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Textarea } from "../ui/textarea";
+import { Avatar, AvatarFallback } from "../ui/avatar";
+import { Separator } from "../ui/separator";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "../ui/pagination";
 import { toast } from "sonner";
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 
 interface JudgeMeReviewsProps {
   productId: string;
@@ -16,24 +24,23 @@ interface JudgeMeReviewsProps {
   productHandle: string;
 }
 
-export const JudgeMeReviews = ({ productTitle = "Avaliações", productHandle }: JudgeMeReviewsProps) => {
+export const JudgeMeReviews = ({ productTitle = "Reviews", productHandle }: JudgeMeReviewsProps) => {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isWriting, setIsWriting] = useState(false);
+  const [isWriting, setIsWriting] = useState(false); // Controla a visibilidade do formulário
 
-  // Form States
+  // Estados de Paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
+
+  // Estados do Formulário
   const [author, setAuthor] = useState("");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [rating, setRating] = useState(5);
   const [imagesText, setImagesText] = useState("");
   const [files, setFiles] = useState<File[]>([]);
-  const [previewUrls, setPreviewUrls] = useState<string[]>([]); // URLs para preview local
   const [submitting, setSubmitting] = useState(false);
-
-  // Pagination States
-  const [currentPage, setCurrentPage] = useState(1);
-  const reviewsPerPage = 5;
 
   useEffect(() => {
     const fetchReviews = async () => {
@@ -41,7 +48,7 @@ export const JudgeMeReviews = ({ productTitle = "Avaliações", productHandle }:
         setLoading(true);
         let merged: Review[] = [];
 
-        // 1. CSV Import
+        // 1. Importação CSV
         try {
           const response = await fetch('/reviews.csv');
           if (response.ok) {
@@ -59,7 +66,7 @@ export const JudgeMeReviews = ({ productTitle = "Avaliações", productHandle }:
           console.warn("CSV Error:", err);
         }
 
-        // 2. Supabase Import
+        // 2. Importação Supabase
         if (supabase) {
           const { data, error } = await supabase
             .from('reviews')
@@ -73,7 +80,7 @@ export const JudgeMeReviews = ({ productTitle = "Avaliações", productHandle }:
               title: row.title ?? "",
               body: row.content ?? "",
               rating: Number(row.rating) || 5,
-              author: row.name ?? "Cliente Verificado",
+              author: row.name ?? "Verified Customer",
               date: row.created_at ?? new Date().toISOString(),
               productHandle: row.product_handle ?? productHandle,
               images: row.photo_url 
@@ -84,6 +91,7 @@ export const JudgeMeReviews = ({ productTitle = "Avaliações", productHandle }:
           }
         }
 
+        // Ordenação: Mais recentes primeiro (Data decrescente)
         merged.sort((a, b) => {
           const ad = a.date ? new Date(a.date).getTime() : 0;
           const bd = b.date ? new Date(b.date).getTime() : 0;
@@ -101,35 +109,19 @@ export const JudgeMeReviews = ({ productTitle = "Avaliações", productHandle }:
     if (productHandle) fetchReviews();
   }, [productHandle]);
 
-  // Preview de imagens selecionadas (Efeito colateral)
-  useEffect(() => {
-    if (files.length === 0) {
-      setPreviewUrls([]);
-      return;
-    }
-    // Cria URLs temporárias para preview
-    const newPreviewUrls = files.map(file => URL.createObjectURL(file));
-    setPreviewUrls(newPreviewUrls);
-
-    // Limpeza de memória
-    return () => {
-      newPreviewUrls.forEach(url => URL.revokeObjectURL(url));
-    };
-  }, [files]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!productHandle) return;
     if (!title.trim() || !body.trim()) {
-      toast.error("Por favor, preencha o título e sua opinião.");
+      toast.error("Please fill in the title and your review.");
       return;
     }
     setSubmitting(true);
     
     try {
-      if (!supabase) throw new Error("Supabase não configurado");
+      if (!supabase) throw new Error("Supabase not configured");
 
-      // Upload Images (Só acontece aqui, no submit)
+      // Upload de Imagens
       const bucket = "reviews";
       const uploadedUrls: string[] = [];
       
@@ -153,7 +145,7 @@ export const JudgeMeReviews = ({ productTitle = "Avaliações", productHandle }:
 
       const { error } = await supabase.from("reviews").insert({
         product_handle: productHandle,
-        name: author || "Cliente Verificado",
+        name: author || "Verified Customer",
         title,
         content: body,
         rating,
@@ -168,7 +160,7 @@ export const JudgeMeReviews = ({ productTitle = "Avaliações", productHandle }:
         title,
         body,
         rating,
-        author: author || "Cliente Verificado",
+        author: author || "Verified Customer",
         date: new Date().toISOString(),
         productHandle,
         images: finalImages,
@@ -176,32 +168,20 @@ export const JudgeMeReviews = ({ productTitle = "Avaliações", productHandle }:
 
       setReviews([newReview, ...reviews]);
       
-      // Reset Form
+      // Resetar Formulário
       setAuthor(""); setTitle(""); setBody(""); setRating(5); setImagesText(""); setFiles([]);
-      setIsWriting(false);
-      toast.success("Avaliação enviada com sucesso!");
+      setIsWriting(false); // Fecha o formulário
+      toast.success("Review submitted successfully!");
 
     } catch (err) {
       console.error(err);
-      toast.error("Erro ao enviar avaliação.");
+      toast.error("Error submitting review.");
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Paginação Logic
-  const indexOfLastReview = currentPage * reviewsPerPage;
-  const indexOfFirstReview = indexOfLastReview - reviewsPerPage;
-  const currentReviews = reviews.slice(indexOfFirstReview, indexOfLastReview);
-  const totalPages = Math.ceil(reviews.length / reviewsPerPage);
-
-  const paginate = (pageNumber: number) => {
-    setCurrentPage(pageNumber);
-    // Opcional: Scrollar para o topo da lista de reviews
-    document.getElementById('reviews-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
-  // Cálculos Dashboard
+  // Cálculos para o Painel de Estrelas
   const averageRating = reviews.length 
     ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)
     : "0.0";
@@ -212,6 +192,17 @@ export const JudgeMeReviews = ({ productTitle = "Avaliações", productHandle }:
     percentage: reviews.length ? (reviews.filter(r => Math.round(r.rating) === stars).length / reviews.length) * 100 : 0
   }));
 
+  // Lógica de Paginação
+  const indexOfLastReview = currentPage * itemsPerPage;
+  const indexOfFirstReview = indexOfLastReview - itemsPerPage;
+  const currentReviews = reviews.slice(indexOfFirstReview, indexOfLastReview);
+  const totalPages = Math.ceil(reviews.length / itemsPerPage);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    document.getElementById("reviews")?.scrollIntoView({ behavior: "smooth" });
+  };
+
   if (loading) {
     return (
       <div className="py-24 flex justify-center">
@@ -221,17 +212,15 @@ export const JudgeMeReviews = ({ productTitle = "Avaliações", productHandle }:
   }
 
   return (
-    // Removido max-w-4xl para usar largura total do container pai (w-full)
-    <div id="reviews" className="mt-32 w-full px-0 mb-24 font-sans">
-      
-      {/* HEADER: Dashboard */}
+    <div id="reviews" className="mt-32 max-w-4xl mx-auto px-6 mb-24 font-sans">
+      {/* HEADER: Minimalista */}
       <div className="mb-16">
         <h2 className="text-3xl font-light text-center mb-12 tracking-tight text-foreground">
-          Avaliações dos Clientes
+          Customer Reviews
         </h2>
         
         <div className="grid grid-cols-1 md:grid-cols-12 gap-12 items-center">
-          {/* Nota */}
+          {/* Coluna da Nota (Esquerda) */}
           <div className="md:col-span-3 text-center md:text-left flex flex-col items-center md:items-start">
             <span className="text-6xl font-light text-foreground leading-none mb-2">
               {averageRating}
@@ -245,11 +234,11 @@ export const JudgeMeReviews = ({ productTitle = "Avaliações", productHandle }:
               ))}
             </div>
             <p className="text-xs uppercase tracking-widest text-muted-foreground">
-              {reviews.length} Opiniões
+              {reviews.length} Reviews
             </p>
           </div>
 
-          {/* Barras */}
+          {/* Coluna das Barras (Centro) */}
           <div className="md:col-span-5 space-y-2">
             {ratingCounts.map((item) => (
               <div key={item.stars} className="flex items-center gap-4 text-xs">
@@ -264,14 +253,14 @@ export const JudgeMeReviews = ({ productTitle = "Avaliações", productHandle }:
             ))}
           </div>
 
-          {/* Botão Ação */}
+          {/* Coluna de Ação (Direita) */}
           <div className="md:col-span-4 flex justify-center md:justify-end">
              <Button 
                onClick={() => setIsWriting(!isWriting)} 
                variant="outline"
                className="rounded-none border-foreground text-foreground hover:bg-foreground hover:text-background uppercase tracking-widest text-xs h-12 px-8 transition-all duration-300"
              >
-               {isWriting ? "Cancelar" : "Escrever Avaliação"}
+               {isWriting ? "Cancel" : "Write a Review"}
              </Button>
           </div>
         </div>
@@ -280,14 +269,15 @@ export const JudgeMeReviews = ({ productTitle = "Avaliações", productHandle }:
       <Separator className="mb-12 opacity-50" />
 
       {/* FORMULÁRIO */}
-      <div className={`overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${isWriting ? "max-h-[1600px] opacity-100 mb-16" : "max-h-0 opacity-0 mb-0"}`}>
+      <div className={`overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${isWriting ? "max-h-[1400px] opacity-100 mb-16" : "max-h-0 opacity-0 mb-0"}`}>
         <div className="bg-secondary/10 p-8 md:p-12">
           <div className="max-w-2xl mx-auto">
-            <h3 className="text-lg font-medium text-center mb-8 uppercase tracking-widest">Compartilhe sua Experiência</h3>
+            <h3 className="text-lg font-medium text-center mb-8 uppercase tracking-widest">Share your Experience</h3>
             
             <form onSubmit={handleSubmit} className="space-y-8">
+              {/* Estrelas Centralizadas */}
               <div className="flex flex-col items-center gap-3">
-                <label className="text-xs uppercase tracking-widest text-muted-foreground">Sua Nota</label>
+                <label className="text-xs uppercase tracking-widest text-muted-foreground">Your Rating</label>
                 <div className="flex gap-2">
                   {[1, 2, 3, 4, 5].map((i) => (
                     <button
@@ -308,18 +298,18 @@ export const JudgeMeReviews = ({ productTitle = "Avaliações", productHandle }:
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-xs uppercase tracking-widest text-muted-foreground">Nome</label>
+                  <label className="text-xs uppercase tracking-widest text-muted-foreground">Name</label>
                   <Input 
-                    placeholder="Seu nome" 
+                    placeholder="Your name" 
                     value={author} 
                     onChange={(e) => setAuthor(e.target.value)} 
                     className="bg-transparent border-0 border-b border-muted-foreground/30 rounded-none px-0 focus-visible:ring-0 focus-visible:border-foreground transition-colors"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs uppercase tracking-widest text-muted-foreground">Título</label>
+                  <label className="text-xs uppercase tracking-widest text-muted-foreground">Title</label>
                   <Input 
-                    placeholder="Resumo da sua avaliação" 
+                    placeholder="Summary of your review" 
                     value={title} 
                     onChange={(e) => setTitle(e.target.value)} 
                     className="bg-transparent border-0 border-b border-muted-foreground/30 rounded-none px-0 focus-visible:ring-0 focus-visible:border-foreground transition-colors"
@@ -328,9 +318,9 @@ export const JudgeMeReviews = ({ productTitle = "Avaliações", productHandle }:
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs uppercase tracking-widest text-muted-foreground">Opinião</label>
+                <label className="text-xs uppercase tracking-widest text-muted-foreground">Review</label>
                 <Textarea 
-                  placeholder="Conte-nos os detalhes..." 
+                  placeholder="Tell us the details..." 
                   value={body} 
                   onChange={(e) => setBody(e.target.value)} 
                   rows={5}
@@ -338,58 +328,34 @@ export const JudgeMeReviews = ({ productTitle = "Avaliações", productHandle }:
                 />
               </div>
 
-              {/* Upload Minimalista com Preview */}
+              {/* Upload Minimalista */}
               <div className="space-y-4">
                 <label className="text-xs uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                  <Camera className="w-3 h-3" /> Fotos
+                  <Camera className="w-3 h-3" /> Photos
                 </label>
-                
-                {/* Área de Preview */}
-                {previewUrls.length > 0 && (
-                  <div className="flex gap-4 overflow-x-auto pb-4">
-                    {previewUrls.map((url, idx) => (
-                      <div key={idx} className="relative group w-24 h-24 flex-shrink-0 border border-border">
-                        <img src={url} alt="Preview" className="w-full h-full object-cover" />
-                        <button 
-                          type="button"
-                          onClick={() => {
-                            const newFiles = files.filter((_, i) => i !== idx);
-                            setFiles(newFiles);
-                          }}
-                          className="absolute top-1 right-1 bg-background/80 p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
                 <div className="flex flex-col gap-4">
                   <label className="cursor-pointer border border-dashed border-muted-foreground/40 p-8 flex flex-col items-center justify-center gap-2 hover:bg-secondary/20 transition-colors">
                     <Plus className="w-6 h-6 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">Clique para adicionar fotos</span>
+                    <span className="text-xs text-muted-foreground">Click to add photos</span>
                     <Input 
                       type="file" 
                       multiple 
                       accept="image/*" 
-                      onChange={(e) => {
-                        const newFiles = Array.from(e.target.files ?? []);
-                        setFiles(prev => [...prev, ...newFiles]);
-                      }}
+                      onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
                       className="hidden"
                     />
                   </label>
                   
                   {files.length > 0 && (
                     <p className="text-xs text-green-600 flex items-center justify-center gap-1">
-                        <Check className="w-3 h-3" /> {files.length} imagens prontas para envio
+                        <Check className="w-3 h-3" /> {files.length} images selected
                     </p>
                   )}
                   
+                  {/* Input de URL Discreto */}
                   <div className="pt-2">
                     <Input 
-                      placeholder="Ou cole URLs de imagens aqui..." 
+                      placeholder="Or paste image URLs here..." 
                       value={imagesText} 
                       onChange={(e) => setImagesText(e.target.value)}
                       className="text-xs bg-transparent border-0 border-b border-muted-foreground/20 rounded-none px-0 h-8" 
@@ -404,7 +370,7 @@ export const JudgeMeReviews = ({ productTitle = "Avaliações", productHandle }:
                   disabled={submitting} 
                   className="w-full md:w-auto min-w-[240px] h-12 rounded-none bg-foreground text-background hover:bg-foreground/90 uppercase tracking-widest text-xs"
                 >
-                  {submitting ? "Enviando..." : "Publicar Avaliação"}
+                  {submitting ? "Submitting..." : "Submit Review"}
                 </Button>
               </div>
             </form>
@@ -413,16 +379,16 @@ export const JudgeMeReviews = ({ productTitle = "Avaliações", productHandle }:
       </div>
 
       {/* LISTA DE AVALIAÇÕES */}
-      <div id="reviews-list" className="space-y-16">
+      <div className="space-y-16">
         {currentReviews.length === 0 ? (
           <div className="text-center py-24">
-            <p className="text-muted-foreground font-light text-lg">Seja o primeiro a avaliar este produto.</p>
+            <p className="text-muted-foreground font-light text-lg">Be the first to review this product.</p>
           </div>
         ) : (
           currentReviews.map((review) => (
             <div key={review.id} className="grid grid-cols-1 md:grid-cols-12 gap-8 border-b border-border/30 pb-16 last:border-0 animate-in fade-in duration-700">
               
-              {/* Autor Info */}
+              {/* Info do Autor (Lateral) */}
               <div className="md:col-span-3">
                 <div className="flex items-center gap-3 mb-2">
                   <Avatar className="w-8 h-8 rounded-none bg-secondary/30">
@@ -433,12 +399,12 @@ export const JudgeMeReviews = ({ productTitle = "Avaliações", productHandle }:
                   <p className="font-medium text-sm text-foreground">{review.author}</p>
                 </div>
                 <div className="flex items-center gap-1.5 text-muted-foreground/60 mb-1">
-                   <Check className="w-3 h-3" />
-                   <span className="text-[10px] uppercase tracking-wider">Verificado</span>
+                    <Check className="w-3 h-3" />
+                    <span className="text-[10px] uppercase tracking-wider">Verified</span>
                 </div>
                 {review.date && (
                   <span className="text-[10px] text-muted-foreground/40 uppercase tracking-wider block mt-2">
-                    {new Date(review.date).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
+                    {new Date(review.date).toLocaleDateString("en-US", { year: 'numeric', month: 'long', day: 'numeric' })}
                   </span>
                 )}
               </div>
@@ -461,7 +427,7 @@ export const JudgeMeReviews = ({ productTitle = "Avaliações", productHandle }:
                   {review.body}
                 </p>
 
-                {/* Galeria de Imagens da Review */}
+                {/* Galeria de Imagens com Tratamento de Erro */}
                 {review.images && review.images.length > 0 && (
                   <div className="mt-6 flex gap-4 overflow-x-auto pb-2">
                     {review.images.map((img, idx) => (
@@ -470,18 +436,24 @@ export const JudgeMeReviews = ({ productTitle = "Avaliações", productHandle }:
                           src={img} 
                           alt="Review visual" 
                           className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                          onError={(e) => {
+                            // Oculta o elemento de imagem e seu container pai se a imagem quebrar
+                            e.currentTarget.style.display = 'none';
+                            e.currentTarget.parentElement!.style.display = 'none';
+                          }}
                         />
                       </div>
                     ))}
                   </div>
                 )}
                 
+                {/* Ações Sutis */}
                 <div className="flex items-center gap-6 mt-6 pt-2 opacity-60 hover:opacity-100 transition-opacity">
                   <button className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider">
-                    <ThumbsUp className="w-3 h-3" /> Útil
+                    <ThumbsUp className="w-3 h-3" /> Helpful
                   </button>
                   <button className="text-xs text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider">
-                    Reportar
+                    Report
                   </button>
                 </div>
               </div>
@@ -490,34 +462,35 @@ export const JudgeMeReviews = ({ productTitle = "Avaliações", productHandle }:
         )}
       </div>
 
-      {/* PAGINAÇÃO NUMERADA */}
-      {totalPages > 1 && (
-        <div className="mt-20 flex justify-center">
+      {/* Controles de Paginação */}
+      {reviews.length > itemsPerPage && (
+        <div className="mt-20">
           <Pagination>
             <PaginationContent>
               <PaginationItem>
                 <PaginationPrevious 
-                  onClick={() => currentPage > 1 && paginate(currentPage - 1)}
-                  className={`cursor-pointer ${currentPage === 1 ? 'opacity-50 pointer-events-none' : ''}`}
+                  onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
+                  className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
                 />
               </PaginationItem>
               
-              {[...Array(totalPages)].map((_, idx) => (
-                <PaginationItem key={idx}>
-                  <PaginationLink 
-                    isActive={currentPage === idx + 1}
-                    onClick={() => paginate(idx + 1)}
+              {/* Gerador de Números de Página (1, 2, 3...) */}
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <PaginationItem key={page}>
+                  <PaginationLink
+                    isActive={page === currentPage}
+                    onClick={() => handlePageChange(page)}
                     className="cursor-pointer"
                   >
-                    {idx + 1}
+                    {page}
                   </PaginationLink>
                 </PaginationItem>
               ))}
 
               <PaginationItem>
                 <PaginationNext 
-                  onClick={() => currentPage < totalPages && paginate(currentPage + 1)}
-                  className={`cursor-pointer ${currentPage === totalPages ? 'opacity-50 pointer-events-none' : ''}`}
+                  onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}
+                  className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
                 />
               </PaginationItem>
             </PaginationContent>
