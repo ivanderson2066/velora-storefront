@@ -232,7 +232,7 @@ const ProductDetailPage = () => {
         <div className="velora-container py-20 text-center">
           <p className="text-muted-foreground mb-4">Product not found</p>
           <Link to="/shop">
-            <Button variant="velora-outline">Back to Shop</Button>
+            <Button variant="outline">Back to Shop</Button>
           </Link>
         </div>
         <Footer />
@@ -258,7 +258,7 @@ const ProductDetailPage = () => {
       <Header />
 
       <main className="velora-section bg-background">
-        <div className="velora-container">
+        <div className="container mx-auto px-4 py-8">
           <Link 
             to="/shop" 
             className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors mb-8"
@@ -307,7 +307,7 @@ const ProductDetailPage = () => {
 
             {/* Product Info */}
             <div>
-              <h1 className="velora-heading-md mb-2">{product.title}</h1>
+              <h1 className="text-3xl font-bold tracking-tight mb-2">{product.title}</h1>
               
               {/* Review Rating */}
               {(() => {
@@ -466,12 +466,11 @@ const ProductDetailPage = () => {
           {/* Product Description */}
           {(product.descriptionHtml || product.description) && (
             <div className="mt-16 pt-16 border-t border-border/50">
-              <h2 className="velora-heading-sm mb-6">Product Description</h2>
+              <h2 className="text-2xl font-bold mb-6">Product Description</h2>
               <div className="prose prose-neutral dark:prose-invert max-w-none">
                 {product.descriptionHtml ? (
                   <div
-                    className="velora-body 
-                      [&_img]:rounded-xl [&_img]:my-8 [&_img]:w-full [&_img]:max-w-xl [&_img]:mx-auto [&_img]:shadow-lg
+                    className="[&_img]:rounded-xl [&_img]:my-8 [&_img]:w-full [&_img]:max-w-xl [&_img]:mx-auto [&_img]:shadow-lg
                       [&_p]:mb-4 [&_p]:leading-relaxed
                       [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:mb-4 [&_ul]:space-y-2
                       [&_li]:text-muted-foreground
@@ -480,19 +479,23 @@ const ProductDetailPage = () => {
                     dangerouslySetInnerHTML={{ __html: product.descriptionHtml }}
                   />
                 ) : (
-                  <p className="velora-body whitespace-pre-line">{product.description}</p>
+                  <p className="whitespace-pre-line">{product.description}</p>
                 )}
               </div>
             </div>
           )}
 
-          {/* Customer Reviews - Judge.me Widget */}
-          <JudgeMeReviews productId={product.id} productTitle={product.title} />
+          {/* ✅ CORREÇÃO APLICADA: Conectando as avaliações com o Handle do CSV */}
+          <JudgeMeReviews 
+            productId={product.id} 
+            productTitle={product.title} 
+            productHandle={product.handle} // OBRIGATÓRIO para funcionar com CSV
+          />
 
           {/* Related Products */}
           {relatedProducts.length > 0 && (
             <div className="mt-16 pt-16 border-t border-border/50">
-              <h2 className="velora-heading-sm mb-8">You May Also Like</h2>
+              <h2 className="text-2xl font-bold mb-8">You May Also Like</h2>
               <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide -mx-6 px-6">
                 {relatedProducts.map((product) => (
                   <div key={product.node.id} className="flex-shrink-0 w-[280px] snap-start">
