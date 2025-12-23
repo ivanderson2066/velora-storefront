@@ -16,7 +16,6 @@ interface JudgeMeReviewsProps {
 export const JudgeMeReviews = ({ productTitle = "Avaliações", productHandle }: JudgeMeReviewsProps) => {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode] = useState<"list">("list");
   const [author, setAuthor] = useState("");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -29,69 +28,62 @@ export const JudgeMeReviews = ({ productTitle = "Avaliações", productHandle }:
     const fetchReviews = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/reviews.csv');
         
-        if (response.ok) {
-          const csvText = await response.text();
-          const allReviews = parseReviewsCSV(csvText);
-          
-          const productReviews = allReviews.filter(r => {
-            if (!r.productHandle || !productHandle) return false;
-            const csvHandle = r.productHandle.toLowerCase();
-            const currentHandle = productHandle.toLowerCase();
-            return csvHandle === currentHandle || currentHandle.includes(csvHandle) || csvHandle.includes(currentHandle);
-          });
-
-          let merged = [...productReviews];
-
-          if (supabase) {
-            const { data, error } = await supabase
-              .from('reviews')
-              .select('*')
-              .eq('product_handle', productHandle);
-
-            if (!error && Array.isArray(data)) {
-              const supaReviews: Review[] = data.map((
-                row: {
-                  id?: string | number;
-                  title?: string;
-                  body?: string;
-                  rating?: number | string;
-                  author?: string;
-                  date?: string;
-                  product_handle?: string;
-                  images?: string[];
-                  picture_urls?: string;
-                },
-                idx: number
-              ) => ({
-                id: row.id?.toString?.() ?? `sb-review-${idx}`,
-                title: row.title ?? "",
-                body: row.body ?? "",
-                rating: Number(row.rating) || 0,
-                author: row.author ?? "Cliente Verificado",
-                date: row.date ?? "",
-                productHandle: row.product_handle ?? productHandle,
-                images: Array.isArray(row.images)
-                  ? row.images.filter(Boolean)
-                  : row.picture_urls
-                    ? String(row.picture_urls).split(',').map((s: string) => s.trim()).filter(Boolean)
-                    : []
-              }));
-              merged = [...merged, ...supaReviews];
-            }
+        // 1. Busca reviews do CSV (Arquivo estático)
+        let merged: Review[] = [];
+        try {
+          const response = await fetch('/reviews.csv');
+          if (response.ok) {
+            const csvText = await response.text();
+            const allReviews = parseReviewsCSV(csvText);
+            
+            const productReviews = allReviews.filter(r => {
+              if (!r.productHandle || !productHandle) return false;
+              const csvHandle = r.productHandle.toLowerCase();
+              const currentHandle = productHandle.toLowerCase();
+              return csvHandle === currentHandle || currentHandle.includes(csvHandle) || csvHandle.includes(currentHandle);
+            });
+            merged = [...productReviews];
           }
-
-          merged.sort((a, b) => {
-            const ad = a.date ? new Date(a.date).getTime() : 0;
-            const bd = b.date ? new Date(b.date).getTime() : 0;
-            return bd - ad;
-          });
-
-          setReviews(merged);
-        } else {
-          console.warn("public/reviews.csv not found.");
+        } catch (err) {
+          console.warn("Erro ao carregar CSV:", err);
         }
+
+        // 2. Busca reviews do Supabase (Banco de dados)
+        if (supabase) {
+          const { data, error } = await supabase
+            .from('reviews')
+            .select('*')
+            .eq('product_handle', productHandle)
+            .order('created_at', { ascending: false }); // Ordena pelas mais recentes
+
+          if (!error && data) {
+            const supaReviews: Review[] = data.map((row: any) => ({
+              // Mapeamento das colunas do banco -> Interface Review do código
+              id: row.id?.toString() ?? `sb-${Math.random()}`,
+              title: row.title ?? "",
+              body: row.content ?? "",           // Coluna 'content' do banco vai para 'body'
+              rating: Number(row.rating) || 5,
+              author: row.name ?? "Cliente Verificado", // Coluna 'name' do banco vai para 'author'
+              date: row.created_at ?? new Date().toISOString(), // 'created_at' vai para 'date'
+              productHandle: row.product_handle ?? productHandle,
+              // 'photo_url' (texto separado por vírgula) vira array de imagens
+              images: row.photo_url 
+                ? String(row.photo_url).split(',').map((s: string) => s.trim()).filter(Boolean)
+                : []
+            }));
+            merged = [...merged, ...supaReviews];
+          }
+        }
+
+        // Ordena tudo por data (mais recente primeiro)
+        merged.sort((a, b) => {
+          const ad = a.date ? new Date(a.date).getTime() : 0;
+          const bd = b.date ? new Date(b.date).getTime() : 0;
+          return bd - ad;
+        });
+
+        setReviews(merged);
       } catch (error) {
         console.error("Failed to process reviews:", error);
       } finally {
@@ -108,53 +100,70 @@ export const JudgeMeReviews = ({ productTitle = "Avaliações", productHandle }:
     e.preventDefault();
     if (!productHandle) return;
     if (!title.trim() || !body.trim()) {
-      toast.error("Please fill title and description");
+      toast.error("Por favor, preencha o título e a descrição");
       return;
     }
     setSubmitting(true);
     try {
       if (!supabase) {
-        toast.error("Supabase not configured");
+        toast.error("Supabase não configurado corretamente");
         return;
       }
+
+      // Upload de imagens (se houver)
       const bucket = "reviews";
       const uploadedUrls: string[] = [];
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const path = `${productHandle}/${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name}`;
-        const { error: uploadError } = await supabase.storage
-          .from(bucket)
-          .upload(path, file, { cacheControl: "3600", upsert: false, contentType: file.type });
-        if (uploadError) {
-          toast.error("Failed to upload one of the images");
-          continue;
-        }
-        const { data: publicData } = supabase.storage.from(bucket).getPublicUrl(path);
-        if (publicData?.publicUrl) {
-          uploadedUrls.push(publicData.publicUrl);
+      
+      if (files.length > 0) {
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          const path = `${productHandle}/${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name}`;
+          const { error: uploadError } = await supabase.storage
+            .from(bucket)
+            .upload(path, file, { cacheControl: "3600", upsert: false, contentType: file.type });
+          
+          if (uploadError) {
+            console.error("Upload error:", uploadError);
+            toast.error(`Erro ao enviar imagem ${file.name}`);
+            continue;
+          }
+          
+          const { data: publicData } = supabase.storage.from(bucket).getPublicUrl(path);
+          if (publicData?.publicUrl) {
+            uploadedUrls.push(publicData.publicUrl);
+          }
         }
       }
+
       const typedUrls = imagesText
         .split(",")
         .map((s) => s.trim())
         .filter((s) => s.length > 0);
+      
       const picturesArr = [...uploadedUrls, ...typedUrls];
-      const pictures = picturesArr.join(", ");
+      const picturesString = picturesArr.join(","); // Junta URLs numa string única para o banco
+
+      // Inserção no Banco de Dados (Usando os nomes corretos das colunas)
       const { error } = await supabase
         .from("reviews")
         .insert({
           product_handle: productHandle,
-          author: author || "Cliente Verificado",
-          title,
-          body,
-          rating,
-          date: new Date().toISOString(),
-          picture_urls: pictures,
+          name: author || "Cliente Verificado", // Mapeado para 'name'
+          title: title,
+          content: body,                        // Mapeado para 'content'
+          rating: rating,
+          photo_url: picturesString,            // Mapeado para 'photo_url'
+          verified: true,                       // Define como verificado (opcional)
+          // created_at é gerado automaticamente pelo banco
         });
+
       if (error) {
-        toast.error("Failed to submit review");
+        console.error("Supabase insert error:", error);
+        toast.error("Erro ao enviar avaliação. Tente novamente.");
         return;
       }
+
+      // Atualiza a interface localmente sem precisar recarregar
       const newReview: Review = {
         id: `local-${Date.now()}`,
         title,
@@ -165,14 +174,21 @@ export const JudgeMeReviews = ({ productTitle = "Avaliações", productHandle }:
         productHandle,
         images: picturesArr,
       };
+
       setReviews((prev) => [newReview, ...prev]);
+      
+      // Limpa o formulário
       setAuthor("");
       setTitle("");
       setBody("");
       setRating(5);
       setImagesText("");
       setFiles([]);
-      toast.success("Review submitted");
+      toast.success("Avaliação enviada com sucesso!");
+
+    } catch (err) {
+      console.error(err);
+      toast.error("Ocorreu um erro inesperado.");
     } finally {
       setSubmitting(false);
     }
@@ -183,47 +199,36 @@ export const JudgeMeReviews = ({ productTitle = "Avaliações", productHandle }:
       <div className="mt-16 pt-16 border-t border-gray-100 flex justify-center py-12">
         <div className="flex flex-col items-center gap-2">
           <div className="w-6 h-6 border-2 border-gray-200 border-t-black rounded-full animate-spin"></div>
-          <span className="text-sm text-gray-400">Loading reviews...</span>
+          <span className="text-sm text-gray-400">Carregando avaliações...</span>
         </div>
       </div>
     );
   }
 
+  // Se não houver reviews, mostra estado vazio e formulário
   if (reviews.length === 0) {
     return (
       <div className="mt-16 pt-16 border-t border-gray-100">
-        <h2 className="text-2xl font-bold mb-8 text-center">Customer Reviews</h2>
+        <h2 className="text-2xl font-bold mb-8 text-center">Avaliações dos Clientes</h2>
         <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-200 mx-auto max-w-2xl">
           <div className="flex justify-center mb-3">
             <Star className="w-8 h-8 text-gray-300" />
           </div>
-          <p className="text-gray-600 font-medium">There are no reviews yet for this product.</p>
-          <p className="text-sm text-gray-400 mt-1">Be the first to share your experience!</p>
+          <p className="text-gray-600 font-medium">Ainda não há avaliações para este produto.</p>
+          <p className="text-sm text-gray-400 mt-1">Seja o primeiro a compartilhar sua experiência!</p>
         </div>
         <div className="mt-10 max-w-2xl mx-auto">
-          <h3 className="text-xl font-bold mb-4">Add a review</h3>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input placeholder="Your name" value={author} onChange={(e) => setAuthor(e.target.value)} />
-              <Input placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
-            </div>
-            <div className="flex items-center gap-3">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => setRating(i)}
-                  className={`p-1 rounded ${i <= rating ? "text-yellow-400" : "text-gray-300"}`}
-                >
-                  <Star className={`w-5 h-5 ${i <= rating ? "fill-current" : ""}`} />
-                </button>
-              ))}
-            </div>
-            <Textarea placeholder="Your experience" value={body} onChange={(e) => setBody(e.target.value)} />
-            <Input placeholder="Image URLs (comma separated)" value={imagesText} onChange={(e) => setImagesText(e.target.value)} />
-            <Input type="file" multiple accept="image/*" onChange={(e) => setFiles(Array.from(e.target.files ?? []))} />
-            <Button type="submit" disabled={submitting}>{submitting ? "Submitting..." : "Submit review"}</Button>
-          </form>
+          <h3 className="text-xl font-bold mb-4">Adicionar avaliação</h3>
+          <ReviewForm 
+            handleSubmit={handleSubmit}
+            author={author} setAuthor={setAuthor}
+            title={title} setTitle={setTitle}
+            rating={rating} setRating={setRating}
+            body={body} setBody={setBody}
+            imagesText={imagesText} setImagesText={setImagesText}
+            setFiles={setFiles}
+            submitting={submitting}
+          />
         </div>
       </div>
     );
@@ -234,7 +239,7 @@ export const JudgeMeReviews = ({ productTitle = "Avaliações", productHandle }:
   return (
     <div className="mt-16 pt-12 border-t border-gray-100">
       <div className="flex flex-col items-center mb-12">
-        <h2 className="text-2xl font-bold mb-4 text-gray-900">What our customers say</h2>
+        <h2 className="text-2xl font-bold mb-4 text-gray-900">O que os clientes dizem</h2>
         <div className="flex items-center gap-4 bg-white px-6 py-3 rounded-full shadow-sm border border-gray-100">
           <div className="flex text-yellow-400">
             {[...Array(5)].map((_, i) => (
@@ -250,7 +255,7 @@ export const JudgeMeReviews = ({ productTitle = "Avaliações", productHandle }:
             <span className="text-sm text-gray-500">/ 5.0</span>
           </div>
           <div className="h-4 w-px bg-gray-200"></div>
-          <span className="text-sm font-medium text-gray-600">{reviews.length} reviews</span>
+          <span className="text-sm font-medium text-gray-600">{reviews.length} avaliações</span>
         </div>
       </div>
 
@@ -266,7 +271,7 @@ export const JudgeMeReviews = ({ productTitle = "Avaliações", productHandle }:
                   <p className="text-sm font-bold text-gray-900 line-clamp-1">{review.author}</p>
                   <div className="flex items-center gap-1">
                     <CheckCircle2 className="w-3 h-3 text-green-500" />
-                    <span className="text-[10px] text-green-600 font-bold uppercase tracking-wider">Verified</span>
+                    <span className="text-[10px] text-green-600 font-bold uppercase tracking-wider">Verificado</span>
                   </div>
                 </div>
               </div>
@@ -290,14 +295,14 @@ export const JudgeMeReviews = ({ productTitle = "Avaliações", productHandle }:
             {review.images && review.images.length > 0 && review.images[0] && (
               <div className="mt-auto pt-4 border-t border-gray-50">
                 <p className="text-xs text-gray-400 mb-2 flex items-center gap-1 font-medium">
-                  <ImageIcon className="w-3 h-3" /> Customer photo
+                  <ImageIcon className="w-3 h-3" /> Foto do cliente
                 </p>
                 <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
                   {review.images.map((img, idx2) => (
                     <div key={idx2} className="relative group w-16 h-16 flex-shrink-0 cursor-zoom-in rounded-lg overflow-hidden border border-gray-200">
                       <img 
                         src={img} 
-                        alt={`Customer review photo of ${review.author}`} 
+                        alt={`Foto da avaliação de ${review.author}`} 
                         className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                         onError={(e) => {
                           (e.target as HTMLImageElement).style.display = "none";
@@ -313,30 +318,57 @@ export const JudgeMeReviews = ({ productTitle = "Avaliações", productHandle }:
       </div>
 
       <div className="mt-12 max-w-2xl mx-auto">
-        <h3 className="text-xl font-bold mb-4">Add a review</h3>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input placeholder="Your name" value={author} onChange={(e) => setAuthor(e.target.value)} />
-            <Input placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
-          </div>
-          <div className="flex items-center gap-3">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => setRating(i)}
-                className={`p-1 rounded ${i <= rating ? "text-yellow-400" : "text-gray-300"}`}
-              >
-                <Star className={`w-5 h-5 ${i <= rating ? "fill-current" : ""}`} />
-              </button>
-            ))}
-          </div>
-          <Textarea placeholder="Your experience" value={body} onChange={(e) => setBody(e.target.value)} />
-          <Input placeholder="Image URLs (comma separated)" value={imagesText} onChange={(e) => setImagesText(e.target.value)} />
-          <Input type="file" multiple accept="image/*" onChange={(e) => setFiles(Array.from(e.target.files ?? []))} />
-          <Button type="submit" disabled={submitting}>{submitting ? "Submitting..." : "Submit review"}</Button>
-        </form>
+        <h3 className="text-xl font-bold mb-4">Adicionar avaliação</h3>
+        <ReviewForm 
+          handleSubmit={handleSubmit}
+          author={author} setAuthor={setAuthor}
+          title={title} setTitle={setTitle}
+          rating={rating} setRating={setRating}
+          body={body} setBody={setBody}
+          imagesText={imagesText} setImagesText={setImagesText}
+          setFiles={setFiles}
+          submitting={submitting}
+        />
       </div>
     </div>
   );
 };
+
+// Componente auxiliar para o formulário (para evitar repetição)
+const ReviewForm = ({ 
+  handleSubmit, author, setAuthor, title, setTitle, rating, setRating, body, setBody, imagesText, setImagesText, setFiles, submitting 
+}: any) => (
+  <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <Input placeholder="Seu nome" value={author} onChange={(e) => setAuthor(e.target.value)} />
+      <Input placeholder="Título da avaliação" value={title} onChange={(e) => setTitle(e.target.value)} />
+    </div>
+    <div className="flex items-center gap-3">
+      <span className="text-sm text-gray-500">Sua nota:</span>
+      <div className="flex">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <button
+            key={i}
+            type="button"
+            onClick={() => setRating(i)}
+            className={`p-1 rounded transition-colors ${i <= rating ? "text-yellow-400" : "text-gray-300 hover:text-gray-400"}`}
+          >
+            <Star className={`w-6 h-6 ${i <= rating ? "fill-current" : ""}`} />
+          </button>
+        ))}
+      </div>
+    </div>
+    <Textarea placeholder="Conte sobre sua experiência com o produto..." value={body} onChange={(e) => setBody(e.target.value)} rows={4} />
+    
+    <div className="space-y-2">
+      <p className="text-sm font-medium text-gray-700">Adicionar fotos (Opcional)</p>
+      <Input placeholder="URLs de imagens (separadas por vírgula)" value={imagesText} onChange={(e) => setImagesText(e.target.value)} />
+      <div className="text-xs text-gray-400 text-center uppercase font-bold tracking-widest my-2">OU</div>
+      <Input type="file" multiple accept="image/*" onChange={(e) => setFiles(Array.from(e.target.files ?? []))} className="cursor-pointer" />
+    </div>
+
+    <Button type="submit" disabled={submitting} className="w-full">
+      {submitting ? "Enviando..." : "Enviar avaliação"}
+    </Button>
+  </form>
+);
