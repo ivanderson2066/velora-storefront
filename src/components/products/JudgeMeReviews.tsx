@@ -1,10 +1,12 @@
-import { Star, CheckCircle2, Image as ImageIcon, User } from "lucide-react";
+import { Star, CheckCircle, User, ThumbsUp, Camera, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { parseReviewsCSV, Review } from "@/lib/csvParser";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 
 interface JudgeMeReviewsProps {
@@ -16,6 +18,9 @@ interface JudgeMeReviewsProps {
 export const JudgeMeReviews = ({ productTitle = "Avaliações", productHandle }: JudgeMeReviewsProps) => {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isWriting, setIsWriting] = useState(false); // Controla a visibilidade do formulário
+
+  // Form States
   const [author, setAuthor] = useState("");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -28,15 +33,14 @@ export const JudgeMeReviews = ({ productTitle = "Avaliações", productHandle }:
     const fetchReviews = async () => {
       try {
         setLoading(true);
-        
-        // 1. Busca reviews do CSV (Arquivo estático)
         let merged: Review[] = [];
+
+        // 1. CSV Import
         try {
           const response = await fetch('/reviews.csv');
           if (response.ok) {
             const csvText = await response.text();
             const allReviews = parseReviewsCSV(csvText);
-            
             const productReviews = allReviews.filter(r => {
               if (!r.productHandle || !productHandle) return false;
               const csvHandle = r.productHandle.toLowerCase();
@@ -46,28 +50,26 @@ export const JudgeMeReviews = ({ productTitle = "Avaliações", productHandle }:
             merged = [...productReviews];
           }
         } catch (err) {
-          console.warn("Erro ao carregar CSV:", err);
+          console.warn("CSV Error:", err);
         }
 
-        // 2. Busca reviews do Supabase (Banco de dados)
+        // 2. Supabase Import
         if (supabase) {
           const { data, error } = await supabase
             .from('reviews')
             .select('*')
             .eq('product_handle', productHandle)
-            .order('created_at', { ascending: false }); // Ordena pelas mais recentes
+            .order('created_at', { ascending: false });
 
           if (!error && data) {
             const supaReviews: Review[] = data.map((row: any) => ({
-              // Mapeamento das colunas do banco -> Interface Review do código
               id: row.id?.toString() ?? `sb-${Math.random()}`,
               title: row.title ?? "",
-              body: row.content ?? "",           // Coluna 'content' do banco vai para 'body'
+              body: row.content ?? "",
               rating: Number(row.rating) || 5,
-              author: row.name ?? "Cliente Verificado", // Coluna 'name' do banco vai para 'author'
-              date: row.created_at ?? new Date().toISOString(), // 'created_at' vai para 'date'
+              author: row.name ?? "Cliente Verificado",
+              date: row.created_at ?? new Date().toISOString(),
               productHandle: row.product_handle ?? productHandle,
-              // 'photo_url' (texto separado por vírgula) vira array de imagens
               images: row.photo_url 
                 ? String(row.photo_url).split(',').map((s: string) => s.trim()).filter(Boolean)
                 : []
@@ -76,7 +78,6 @@ export const JudgeMeReviews = ({ productTitle = "Avaliações", productHandle }:
           }
         }
 
-        // Ordena tudo por data (mais recente primeiro)
         merged.sort((a, b) => {
           const ad = a.date ? new Date(a.date).getTime() : 0;
           const bd = b.date ? new Date(b.date).getTime() : 0;
@@ -85,85 +86,61 @@ export const JudgeMeReviews = ({ productTitle = "Avaliações", productHandle }:
 
         setReviews(merged);
       } catch (error) {
-        console.error("Failed to process reviews:", error);
+        console.error("Failed to load reviews:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    if (productHandle) {
-      fetchReviews();
-    }
+    if (productHandle) fetchReviews();
   }, [productHandle]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!productHandle) return;
     if (!title.trim() || !body.trim()) {
-      toast.error("Por favor, preencha o título e a descrição");
+      toast.error("Por favor, preencha o título e sua opinião.");
       return;
     }
     setSubmitting(true);
+    
     try {
-      if (!supabase) {
-        toast.error("Supabase não configurado corretamente");
-        return;
-      }
+      if (!supabase) throw new Error("Supabase não configurado");
 
-      // Upload de imagens (se houver)
+      // Upload Images
       const bucket = "reviews";
       const uploadedUrls: string[] = [];
       
       if (files.length > 0) {
-        for (let i = 0; i < files.length; i++) {
-          const file = files[i];
+        for (const file of files) {
           const path = `${productHandle}/${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name}`;
           const { error: uploadError } = await supabase.storage
             .from(bucket)
-            .upload(path, file, { cacheControl: "3600", upsert: false, contentType: file.type });
+            .upload(path, file, { contentType: file.type });
           
-          if (uploadError) {
-            console.error("Upload error:", uploadError);
-            toast.error(`Erro ao enviar imagem ${file.name}`);
-            continue;
-          }
-          
-          const { data: publicData } = supabase.storage.from(bucket).getPublicUrl(path);
-          if (publicData?.publicUrl) {
-            uploadedUrls.push(publicData.publicUrl);
+          if (!uploadError) {
+            const { data: publicData } = supabase.storage.from(bucket).getPublicUrl(path);
+            if (publicData?.publicUrl) uploadedUrls.push(publicData.publicUrl);
           }
         }
       }
 
-      const typedUrls = imagesText
-        .split(",")
-        .map((s) => s.trim())
-        .filter((s) => s.length > 0);
-      
-      const picturesArr = [...uploadedUrls, ...typedUrls];
-      const picturesString = picturesArr.join(","); // Junta URLs numa string única para o banco
+      const manualUrls = imagesText.split(",").map(s => s.trim()).filter(s => s.length > 0);
+      const finalImages = [...uploadedUrls, ...manualUrls];
+      const picturesString = finalImages.join(",");
 
-      // Inserção no Banco de Dados (Usando os nomes corretos das colunas)
-      const { error } = await supabase
-        .from("reviews")
-        .insert({
-          product_handle: productHandle,
-          name: author || "Cliente Verificado", // Mapeado para 'name'
-          title: title,
-          content: body,                        // Mapeado para 'content'
-          rating: rating,
-          photo_url: picturesString,            // Mapeado para 'photo_url'
-          verified: true,                       // Define como verificado (opcional)
-          // created_at é gerado automaticamente pelo banco
-        });
+      const { error } = await supabase.from("reviews").insert({
+        product_handle: productHandle,
+        name: author || "Cliente Verificado",
+        title,
+        content: body,
+        rating,
+        photo_url: picturesString,
+        verified: true,
+      });
 
-      if (error) {
-        console.error("Supabase insert error:", error);
-        toast.error("Erro ao enviar avaliação. Tente novamente.");
-        return;
-      }
+      if (error) throw error;
 
-      // Atualiza a interface localmente sem precisar recarregar
       const newReview: Review = {
         id: `local-${Date.now()}`,
         title,
@@ -172,203 +149,317 @@ export const JudgeMeReviews = ({ productTitle = "Avaliações", productHandle }:
         author: author || "Cliente Verificado",
         date: new Date().toISOString(),
         productHandle,
-        images: picturesArr,
+        images: finalImages,
       };
 
-      setReviews((prev) => [newReview, ...prev]);
+      setReviews([newReview, ...reviews]);
       
-      // Limpa o formulário
-      setAuthor("");
-      setTitle("");
-      setBody("");
-      setRating(5);
-      setImagesText("");
-      setFiles([]);
+      // Reset Form
+      setAuthor(""); setTitle(""); setBody(""); setRating(5); setImagesText(""); setFiles([]);
+      setIsWriting(false); // Fecha o formulário
       toast.success("Avaliação enviada com sucesso!");
 
     } catch (err) {
       console.error(err);
-      toast.error("Ocorreu um erro inesperado.");
+      toast.error("Erro ao enviar avaliação.");
     } finally {
       setSubmitting(false);
     }
   };
 
+  // Cálculos para o Dashboard de Estrelas
+  const averageRating = reviews.length 
+    ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)
+    : "0.0";
+  
+  const ratingCounts = [5, 4, 3, 2, 1].map(stars => ({
+    stars,
+    count: reviews.filter(r => Math.round(r.rating) === stars).length,
+    percentage: reviews.length ? (reviews.filter(r => Math.round(r.rating) === stars).length / reviews.length) * 100 : 0
+  }));
+
   if (loading) {
     return (
-      <div className="mt-16 pt-16 border-t border-gray-100 flex justify-center py-12">
-        <div className="flex flex-col items-center gap-2">
-          <div className="w-6 h-6 border-2 border-gray-200 border-t-black rounded-full animate-spin"></div>
-          <span className="text-sm text-gray-400">Carregando avaliações...</span>
-        </div>
+      <div className="py-12 flex justify-center">
+        <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
       </div>
     );
   }
-
-  // Se não houver reviews, mostra estado vazio e formulário
-  if (reviews.length === 0) {
-    return (
-      <div className="mt-16 pt-16 border-t border-gray-100">
-        <h2 className="text-2xl font-bold mb-8 text-center">Avaliações dos Clientes</h2>
-        <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-200 mx-auto max-w-2xl">
-          <div className="flex justify-center mb-3">
-            <Star className="w-8 h-8 text-gray-300" />
-          </div>
-          <p className="text-gray-600 font-medium">Ainda não há avaliações para este produto.</p>
-          <p className="text-sm text-gray-400 mt-1">Seja o primeiro a compartilhar sua experiência!</p>
-        </div>
-        <div className="mt-10 max-w-2xl mx-auto">
-          <h3 className="text-xl font-bold mb-4">Adicionar avaliação</h3>
-          <ReviewForm 
-            handleSubmit={handleSubmit}
-            author={author} setAuthor={setAuthor}
-            title={title} setTitle={setTitle}
-            rating={rating} setRating={setRating}
-            body={body} setBody={setBody}
-            imagesText={imagesText} setImagesText={setImagesText}
-            setFiles={setFiles}
-            submitting={submitting}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  const averageRating = (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1);
 
   return (
-    <div className="mt-16 pt-12 border-t border-gray-100">
-      <div className="flex flex-col items-center mb-12">
-        <h2 className="text-2xl font-bold mb-4 text-gray-900">O que os clientes dizem</h2>
-        <div className="flex items-center gap-4 bg-white px-6 py-3 rounded-full shadow-sm border border-gray-100">
-          <div className="flex text-yellow-400">
-            {[...Array(5)].map((_, i) => (
-              <Star 
-                key={i} 
-                className={`w-5 h-5 ${i < Math.round(Number(averageRating)) ? "fill-current" : "text-gray-200"}`} 
-              />
+    <div id="reviews" className="mt-24 max-w-5xl mx-auto px-4">
+      {/* HEADER: Resumo e Botão de Ação */}
+      <div className="flex flex-col md:flex-row gap-12 mb-16">
+        {/* Lado Esquerdo: Resumo Geral */}
+        <div className="flex-1 space-y-6">
+          <h2 className="text-2xl font-bold tracking-tight">Avaliações dos Clientes</h2>
+          
+          <div className="flex items-center gap-4">
+            <span className="text-5xl font-bold text-foreground">{averageRating}</span>
+            <div className="space-y-1">
+              <div className="flex text-yellow-400">
+                {[...Array(5)].map((_, i) => (
+                  <Star 
+                    key={i} 
+                    className={`w-5 h-5 ${i < Math.round(Number(averageRating)) ? "fill-current" : "text-gray-200"}`} 
+                  />
+                ))}
+              </div>
+              <p className="text-sm text-muted-foreground font-medium">
+                Baseado em {reviews.length} avaliações
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {ratingCounts.map((item) => (
+              <div key={item.stars} className="flex items-center gap-3 text-sm">
+                <div className="w-12 text-muted-foreground font-medium flex items-center gap-1">
+                  {item.stars} <Star className="w-3 h-3" />
+                </div>
+                <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-yellow-400 rounded-full" 
+                    style={{ width: `${item.percentage}%` }}
+                  />
+                </div>
+                <div className="w-8 text-right text-muted-foreground text-xs">
+                  {item.count}
+                </div>
+              </div>
             ))}
           </div>
-          <div className="h-4 w-px bg-gray-200"></div>
-          <div className="flex items-baseline gap-1">
-            <span className="font-bold text-xl text-gray-900">{averageRating}</span>
-            <span className="text-sm text-gray-500">/ 5.0</span>
-          </div>
-          <div className="h-4 w-px bg-gray-200"></div>
-          <span className="text-sm font-medium text-gray-600">{reviews.length} avaliações</span>
+        </div>
+
+        {/* Lado Direito: Call to Action (Ou Formulário) */}
+        <div className="flex-1 flex flex-col justify-center items-start md:items-end border-l border-border/0 md:border-border/50 md:pl-12">
+           <div className="bg-secondary/30 p-6 rounded-2xl w-full max-w-sm">
+             <h3 className="font-semibold text-lg mb-2">Comprou este produto?</h3>
+             <p className="text-sm text-muted-foreground mb-4">
+               Compartilhe sua experiência e ajude outros clientes.
+             </p>
+             <Button 
+               onClick={() => setIsWriting(!isWriting)} 
+               className="w-full"
+               variant={isWriting ? "secondary" : "default"}
+             >
+               {isWriting ? "Cancelar Avaliação" : "Escrever uma Avaliação"}
+             </Button>
+           </div>
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {reviews.map((review, idx) => (
-          <div key={`${review.id}-${idx}`} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col h-full">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-500">
-                  <User className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-gray-900 line-clamp-1">{review.author}</p>
-                  <div className="flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3 text-green-500" />
-                    <span className="text-[10px] text-green-600 font-bold uppercase tracking-wider">Verificado</span>
+      <Separator className="mb-12" />
+
+      {/* FORMULÁRIO (Expansível no Topo com CSS Transitions) */}
+      <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isWriting ? "max-h-[1200px] opacity-100 mb-16" : "max-h-0 opacity-0 mb-0"}`}>
+        <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-sm max-w-3xl mx-auto">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-xl font-bold">Escreva sua avaliação</h3>
+            <Button variant="ghost" size="icon" onClick={() => setIsWriting(false)}>
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+          
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Avaliação em Estrelas */}
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium">Sua nota geral</label>
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setRating(i)}
+                    className="group p-1 focus:outline-none transition-transform active:scale-95"
+                  >
+                    <Star 
+                      className={`w-8 h-8 transition-colors ${
+                        i <= rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300 group-hover:text-yellow-200"
+                      }`} 
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Nome (opcional)</label>
+                <Input 
+                  placeholder="Ex: Maria Silva" 
+                  value={author} 
+                  onChange={(e) => setAuthor(e.target.value)} 
+                  className="bg-background"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Título da avaliação</label>
+                <Input 
+                  placeholder="Ex: Amei o produto!" 
+                  value={title} 
+                  onChange={(e) => setTitle(e.target.value)} 
+                  className="bg-background"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Sua experiência</label>
+              <Textarea 
+                placeholder="Conte-nos o que você achou da qualidade, entrega, etc." 
+                value={body} 
+                onChange={(e) => setBody(e.target.value)} 
+                rows={4}
+                className="bg-background resize-none"
+              />
+            </div>
+
+            {/* Upload de Imagens */}
+            <div className="space-y-3">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Camera className="w-4 h-4" /> Adicionar fotos
+              </label>
+              <div className="flex flex-col gap-3">
+                <Input 
+                  type="file" 
+                  multiple 
+                  accept="image/*" 
+                  onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
+                  className="cursor-pointer file:text-primary file:font-semibold hover:bg-secondary/20 transition-colors"
+                />
+                {files.length > 0 && (
+                  <p className="text-xs text-green-600 font-medium flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" /> {files.length} arquivo(s) selecionado(s)
+                  </p>
+                )}
+                {/* Fallback de URL */}
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-card px-2 text-muted-foreground">OU via Link</span>
                   </div>
                 </div>
+                <Input 
+                  placeholder="Colar URLs de imagens (separadas por vírgula)" 
+                  value={imagesText} 
+                  onChange={(e) => setImagesText(e.target.value)}
+                  className="text-sm" 
+                />
               </div>
-              {review.date && (
-                <span className="text-xs text-gray-400 font-medium">
-                  {new Date(review.date).toLocaleDateString()}
-                </span>
-              )}
             </div>
-            <div className="flex text-yellow-400 mb-3">
-              {[...Array(5)].map((_, i) => (
-                <Star key={i} className={`w-3.5 h-3.5 ${i < review.rating ? "fill-current" : "text-gray-200"}`} />
-              ))}
+
+            <div className="pt-2">
+              <Button type="submit" size="lg" disabled={submitting} className="w-full md:w-auto min-w-[200px]">
+                {submitting ? "Publicando..." : "Publicar Avaliação"}
+              </Button>
             </div>
-            {review.title && (
-              <h3 className="font-bold text-gray-900 mb-2 text-sm">{review.title}</h3>
-            )}
-            <p className="text-gray-600 text-sm leading-relaxed mb-4 flex-grow">
-              {review.body}
-            </p>
-            {review.images && review.images.length > 0 && review.images[0] && (
-              <div className="mt-auto pt-4 border-t border-gray-50">
-                <p className="text-xs text-gray-400 mb-2 flex items-center gap-1 font-medium">
-                  <ImageIcon className="w-3 h-3" /> Foto do cliente
-                </p>
-                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                  {review.images.map((img, idx2) => (
-                    <div key={idx2} className="relative group w-16 h-16 flex-shrink-0 cursor-zoom-in rounded-lg overflow-hidden border border-gray-200">
-                      <img 
-                        src={img} 
-                        alt={`Foto da avaliação de ${review.author}`} 
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = "none";
-                        }}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        ))}
+          </form>
+        </div>
       </div>
 
-      <div className="mt-12 max-w-2xl mx-auto">
-        <h3 className="text-xl font-bold mb-4">Adicionar avaliação</h3>
-        <ReviewForm 
-          handleSubmit={handleSubmit}
-          author={author} setAuthor={setAuthor}
-          title={title} setTitle={setTitle}
-          rating={rating} setRating={setRating}
-          body={body} setBody={setBody}
-          imagesText={imagesText} setImagesText={setImagesText}
-          setFiles={setFiles}
-          submitting={submitting}
-        />
+      {/* LISTA DE AVALIAÇÕES (Estilo Vertical Clean) */}
+      <div className="space-y-8">
+        {reviews.length === 0 ? (
+          <div className="text-center py-16 bg-secondary/10 rounded-xl border border-dashed">
+            <p className="text-muted-foreground">Nenhuma avaliação ainda. Seja o primeiro!</p>
+          </div>
+        ) : (
+          reviews.map((review) => (
+            <div key={review.id} className="flex flex-col md:flex-row gap-6 pb-8 border-b border-border/40 last:border-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              
+              {/* Avatar e Autor (Coluna Esquerda Desktop) */}
+              <div className="md:w-48 flex-shrink-0 flex md:block items-center gap-3">
+                <div className="flex items-center gap-3 mb-2">
+                  <Avatar className="w-10 h-10 border border-border">
+                    <AvatarFallback className="bg-primary/5 text-primary font-bold">
+                      {review.author.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="md:hidden">
+                    <p className="font-semibold text-sm text-foreground">{review.author}</p>
+                    <div className="flex items-center gap-1 text-green-600">
+                      <CheckCircle className="w-3 h-3" />
+                      <span className="text-[10px] font-bold uppercase tracking-wider">Verificado</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="hidden md:block">
+                  <p className="font-semibold text-sm text-foreground mb-1">{review.author}</p>
+                  <div className="flex items-center gap-1 text-green-600 mb-2">
+                    <CheckCircle className="w-3 h-3" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider">Comprador Verificado</span>
+                  </div>
+                  {review.date && (
+                    <span className="text-xs text-muted-foreground block">
+                      {new Date(review.date).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Conteúdo da Avaliação (Coluna Direita Desktop) */}
+              <div className="flex-1 space-y-3">
+                <div className="flex justify-between items-start">
+                  <div className="flex text-yellow-400 mb-1">
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} className={`w-4 h-4 ${i < review.rating ? "fill-current" : "text-gray-200"}`} />
+                    ))}
+                  </div>
+                  {/* Data no Mobile aparece aqui */}
+                  {review.date && (
+                    <span className="text-xs text-muted-foreground md:hidden">
+                      {new Date(review.date).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
+
+                {review.title && (
+                  <h4 className="font-bold text-foreground">{review.title}</h4>
+                )}
+                
+                <p className="text-foreground/80 leading-relaxed text-sm md:text-base">
+                  {review.body}
+                </p>
+
+                {/* Imagens da Avaliação */}
+                {review.images && review.images.length > 0 && (
+                  <div className="mt-4 flex gap-3 overflow-x-auto pb-2 pt-2">
+                    {review.images.map((img, idx) => (
+                      <div key={idx} className="relative group w-24 h-24 flex-shrink-0 cursor-zoom-in rounded-xl overflow-hidden border border-border/50 bg-secondary/20">
+                        <img 
+                          src={img} 
+                          alt="Foto do cliente" 
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Botões de Ação (Fake para estética) */}
+                <div className="flex items-center gap-4 mt-4 pt-2">
+                  <button className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors group">
+                    <ThumbsUp className="w-3.5 h-3.5 group-hover:text-primary" /> Útil
+                  </button>
+                  <span className="text-border text-xs">|</span>
+                  <button className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                    Reportar
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
+
+      {reviews.length > 5 && (
+        <div className="mt-12 text-center">
+          <Button variant="outline" className="min-w-[200px]">Carregar mais avaliações</Button>
+        </div>
+      )}
     </div>
   );
 };
-
-// Componente auxiliar para o formulário (para evitar repetição)
-const ReviewForm = ({ 
-  handleSubmit, author, setAuthor, title, setTitle, rating, setRating, body, setBody, imagesText, setImagesText, setFiles, submitting 
-}: any) => (
-  <form onSubmit={handleSubmit} className="space-y-4">
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <Input placeholder="Seu nome" value={author} onChange={(e) => setAuthor(e.target.value)} />
-      <Input placeholder="Título da avaliação" value={title} onChange={(e) => setTitle(e.target.value)} />
-    </div>
-    <div className="flex items-center gap-3">
-      <span className="text-sm text-gray-500">Sua nota:</span>
-      <div className="flex">
-        {[1, 2, 3, 4, 5].map((i) => (
-          <button
-            key={i}
-            type="button"
-            onClick={() => setRating(i)}
-            className={`p-1 rounded transition-colors ${i <= rating ? "text-yellow-400" : "text-gray-300 hover:text-gray-400"}`}
-          >
-            <Star className={`w-6 h-6 ${i <= rating ? "fill-current" : ""}`} />
-          </button>
-        ))}
-      </div>
-    </div>
-    <Textarea placeholder="Conte sobre sua experiência com o produto..." value={body} onChange={(e) => setBody(e.target.value)} rows={4} />
-    
-    <div className="space-y-2">
-      <p className="text-sm font-medium text-gray-700">Adicionar fotos (Opcional)</p>
-      <Input placeholder="URLs de imagens (separadas por vírgula)" value={imagesText} onChange={(e) => setImagesText(e.target.value)} />
-      <div className="text-xs text-gray-400 text-center uppercase font-bold tracking-widest my-2">OU</div>
-      <Input type="file" multiple accept="image/*" onChange={(e) => setFiles(Array.from(e.target.files ?? []))} className="cursor-pointer" />
-    </div>
-
-    <Button type="submit" disabled={submitting} className="w-full">
-      {submitting ? "Enviando..." : "Enviar avaliação"}
-    </Button>
-  </form>
-);
