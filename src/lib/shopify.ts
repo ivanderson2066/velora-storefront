@@ -4,6 +4,7 @@ const SHOPIFY_API_VERSION = '2025-07';
 const SHOPIFY_STORE_PERMANENT_DOMAIN = 'fwd9jn-1p.myshopify.com';
 const SHOPIFY_STOREFRONT_URL = `https://${SHOPIFY_STORE_PERMANENT_DOMAIN}/api/${SHOPIFY_API_VERSION}/graphql.json`;
 const SHOPIFY_STOREFRONT_TOKEN = 'b0159fe69afa12edfae41b61b04553f5';
+const SHOPIFY_DEFAULT_COUNTRY = (import.meta.env.VITE_SHOPIFY_DEFAULT_COUNTRY as string | undefined) || 'US';
 
 export interface ProductReview {
   rating: number;
@@ -276,7 +277,10 @@ export async function createStorefrontCheckout(items: Array<{ variantId: string;
   }));
 
   const cartData = await storefrontApiRequest(CART_CREATE_MUTATION, {
-    input: { lines },
+    input: { 
+      lines,
+      buyerIdentity: { countryCode: SHOPIFY_DEFAULT_COUNTRY },
+    },
   });
 
   if (!cartData) {

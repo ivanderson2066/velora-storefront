@@ -19,7 +19,7 @@ const Index = () => {
           content="Transform your living space with innovative smart home gadgets. Levitating clocks, ambient lighting, humidifiers & more. Free shipping to USA."
         />
         <meta name="keywords" content="smart home, ambient lighting, levitating clock, home decor, humidifier, modern gadgets" />
-        <link rel="canonical" href="https://myxelhome.com" />
+        <link rel="canonical" href="https://myxelhome.shop" />
       </Helmet>
 
       <div className="min-h-screen bg-background">

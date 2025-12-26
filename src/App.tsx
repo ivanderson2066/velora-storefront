@@ -21,6 +21,7 @@ import { Navigate } from "react-router-dom";
 import FAQPage from "./pages/FAQPage";
 import ShippingPolicyPage from "./pages/ShippingPolicyPage";
 import RefundPolicyPage from "./pages/RefundPolicyPage";
+import { useCartStore } from "@/stores/cartStore";
 
 const queryClient = new QueryClient();
 
@@ -108,6 +109,16 @@ const App = () => {
             <Toaster />
             <Sonner />
             <BrowserRouter>
+              {(() => {
+                const syncPrices = useCartStore(state => state.syncPrices);
+                const items = useCartStore(state => state.items);
+                useEffect(() => {
+                  if (items.length > 0) {
+                    void syncPrices();
+                  }
+                }, [items.length, syncPrices]);
+                return null;
+              })()}
               <ScrollToTop />
               <Routes>
                 <Route path="/" element={<Index />} />
