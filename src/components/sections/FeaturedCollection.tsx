@@ -12,7 +12,9 @@ const FeaturedCollection = () => {
   useEffect(() => {
     const loadProducts = async () => {
       try {
-        const data = await fetchProducts(4);
+        // MUDANÇA: Buscar 6 produtos para preencher 3 linhas no mobile (2x3) e 2 linhas "cheias" no desktop dependendo da largura, ou 1 linha e meia. 
+        // Se preferir 4 (uma linha desktop) ou 8 (duas linhas), ajuste aqui. 6 é um bom equilíbrio.
+        const data = await fetchProducts(6);
         setProducts(data);
       } catch (error) {
         console.error("Failed to load products:", error);
@@ -48,7 +50,8 @@ const FeaturedCollection = () => {
             <p className="text-muted-foreground">No products found</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 mb-12">
+          /* MUDANÇA: Grid configurado para 2 colunas no mobile (grid-cols-2) e 4 no desktop (lg:grid-cols-4) */
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4 md:gap-6 lg:gap-8 mb-12 justify-center">
             {products.map((product) => (
               <ProductCard key={product.node.id} product={product} />
             ))}
@@ -58,7 +61,7 @@ const FeaturedCollection = () => {
         {/* CTA */}
         <div className="text-center">
           <Link to="/shop">
-            <Button variant="velora-outline" size="lg">
+            <Button variant="outline" size="lg">
               View All Products
               <ArrowRight className="w-4 h-4 ml-1" />
             </Button>
