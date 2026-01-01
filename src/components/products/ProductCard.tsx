@@ -4,7 +4,7 @@ import { useCartStore } from "@/stores/cartStore";
 import { Button } from "@/components/ui/button";
 import { ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
-import { StarRating } from "./StarRating";
+import { RealTimeProductRating } from "./RealTimeProductRating";
 
 interface ProductCardProps {
   product: ShopifyProduct;
@@ -74,11 +74,17 @@ export const ProductCard = ({ product }: ProductCardProps) => {
           <h3 className="text-sm font-medium mb-1 group-hover:text-muted-foreground transition-colors line-clamp-2">
             {node.title}
           </h3>
-          {review && (
-            <div className="mb-1.5">
-              <StarRating rating={review.rating} count={review.ratingCount} size="sm" />
-            </div>
-          )}
+          
+          {/* AQUI ESTAVA FALTANDO O HANDLE NOS CARDS */}
+          <div className="mb-1.5 h-4 flex items-center">
+             <RealTimeProductRating 
+                productId={node.id}
+                handle={node.handle} // <--- ADICIONADO: Agora busca pelo nome também!
+                initialRating={review?.rating || 0}
+                initialCount={review?.ratingCount || 0}
+             />
+          </div>
+
           <div className="flex items-baseline gap-1">
             <span className="text-lg font-semibold">
               ${parseFloat(price.amount).toFixed(2)}

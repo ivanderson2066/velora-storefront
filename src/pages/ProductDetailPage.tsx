@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { fetchProducts, fetchProductByHandle, ShopifyProduct, parseReviewData, fetchVariantPrices } from "@/lib/shopify";
 import { useCartStore } from "@/stores/cartStore";
 import { ProductCard } from "@/components/products/ProductCard";
-import { StarRating } from "@/components/products/StarRating";
+import { RealTimeProductRating } from "@/components/products/RealTimeProductRating";
 import { JudgeMeReviews } from "@/components/products/JudgeMeReviews";
 import { LuxuryDescription } from "@/components/products/LuxuryDescription";
 import { ProductImageCarousel } from "@/components/products/ProductImageCarousel";
@@ -98,7 +98,6 @@ const ProductDetailPage = () => {
           setSelectedVariant(productData.variants.edges[0].node);
         }
 
-        // Filter out current product for related products
         const related = allProducts.filter(p => p.node.handle !== handle).slice(0, 4);
         setRelatedProducts(related);
       } catch (error) {
@@ -116,7 +115,6 @@ const ProductDetailPage = () => {
   useEffect(() => {
     if (!product || !selectedVariant) return;
 
-    // Fetch latest price for selected variant (defensive, updates button labels)
     const fetchLatest = async () => {
       try {
         const prices = await fetchVariantPrices([selectedVariant.id]);
@@ -172,7 +170,6 @@ const ProductDetailPage = () => {
   const handleBuyNow = async () => {
     if (!product || !selectedVariant) return;
 
-    // First ensure we have the latest price for checkout
     try {
       const prices = await fetchVariantPrices([selectedVariant.id]);
       const p = prices[selectedVariant.id];
@@ -187,7 +184,6 @@ const ProductDetailPage = () => {
         selectedOptions: selectedVariant.selectedOptions || [],
       });
     } catch (e) {
-      // fallback to existing price
       addItem({
         product: { node: product },
         variantId: selectedVariant.id,
@@ -202,7 +198,6 @@ const ProductDetailPage = () => {
     try {
       const checkoutUrl = await createCheckout();
       if (checkoutUrl) {
-        // Redirecionamento na mesma aba para melhor UX Mobile
         window.location.href = checkoutUrl;
       }
     } catch (error) {
@@ -244,8 +239,6 @@ const ProductDetailPage = () => {
 
   const images = product.images.edges;
   const price = selectedVariant?.price || product.priceRange.minVariantPrice;
-  
-  // Lógica Senior de Cálculo de Preço
   const unitPrice = parseFloat(price.amount);
   const totalPrice = unitPrice * quantity;
 
@@ -270,7 +263,6 @@ const ProductDetailPage = () => {
           </Link>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
-            {/* Images - Swipeable Carousel */}
             <div>
               <ProductImageCarousel
                 images={images}
@@ -280,27 +272,31 @@ const ProductDetailPage = () => {
               />
             </div>
 
-            {/* Product Info */}
             <div>
               <h1 className="text-3xl font-bold tracking-tight mb-2">{product.title}</h1>
               
-              {/* Review Rating */}
-              {(() => {
-                const review = parseReviewData(product);
-                return review ? (
-                  <div className="mb-4">
-                    <StarRating rating={review.rating} count={review.ratingCount} size="md" />
-                  </div>
-                ) : null;
-              })()}
+              {/* USO DO COMPONENTE CENTRALIZADO */}
+              {/* Removemos a lógica duplicada e usamos apenas o componente que chama o Hook deduplicado */}
+              <div className="mb-4">
+                 {(() => {
+                   const review = parseReviewData(product);
+                   return (
+                     <RealTimeProductRating 
+                        productId={product.id}
+                        handle={product.handle} 
+                        initialRating={review?.rating || 0}
+                        initialCount={review?.ratingCount || 0}
+                        size="md"
+                     />
+                   );
+                 })()}
+              </div>
               
-              {/* Preço com Atualização Dinâmica */}
               <div className="mb-6">
                 <p className="text-3xl font-semibold">
                   ${totalPrice.toFixed(2)} 
                   <span className="text-lg text-muted-foreground font-normal ml-2">USD</span>
                 </p>
-                {/* Mostra preço unitário apenas se quantidade > 1 para dar contexto */}
                 {quantity > 1 && (
                   <p className="text-sm text-muted-foreground mt-1">
                     Preço unitário: ${unitPrice.toFixed(2)}
@@ -308,10 +304,8 @@ const ProductDetailPage = () => {
                 )}
               </div>
 
-              {/* Variants */}
               {product.options.map((option) => {
                 if (option.name === "Title" && option.values.length === 1) return null;
-                
                 return (
                   <div key={option.name} className="mb-6">
                     <p className="text-sm font-medium mb-3">{option.name}</p>
@@ -322,11 +316,9 @@ const ProductDetailPage = () => {
                             o => o.name === option.name && o.value === value
                           )
                         )?.node;
-                        
                         const isSelected = selectedVariant?.selectedOptions.some(
                           o => o.name === option.name && o.value === value
                         );
-
                         return (
                           <button
                             key={value}
@@ -347,7 +339,6 @@ const ProductDetailPage = () => {
                 );
               })}
 
-              {/* Quantity */}
               <div className="mb-6">
                 <p className="text-sm font-medium mb-3">Quantity</p>
                 <div className="flex items-center gap-4">
@@ -369,7 +360,6 @@ const ProductDetailPage = () => {
                 </div>
               </div>
 
-              {/* Action Buttons */}
               <div className="space-y-3 mb-8">
                 <Button
                   onClick={handleBuyNow}
@@ -404,7 +394,6 @@ const ProductDetailPage = () => {
                 </Button>
               </div>
 
-              {/* Trust badges */}
               <div className="grid grid-cols-2 gap-4 p-6 bg-secondary/30 rounded-lg">
                 <div className="flex items-start gap-3">
                   <Truck className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
@@ -438,7 +427,6 @@ const ProductDetailPage = () => {
             </div>
           </div>
 
-          {/* Product Description - Luxury Layout */}
           {(product.descriptionHtml || product.description) && (
             <div className="mt-20 pt-16 border-t border-border/30">
               <div className="text-center mb-12">
@@ -456,14 +444,12 @@ const ProductDetailPage = () => {
             </div>
           )}
 
-          {/* ✅ CORREÇÃO APLICADA: Conectando as avaliações com o Handle do CSV */}
           <JudgeMeReviews 
             productId={product.id} 
             productTitle={product.title} 
-            productHandle={product.handle} // OBRIGATÓRIO para funcionar com CSV
+            productHandle={product.handle} 
           />
 
-          {/* Related Products */}
           {relatedProducts.length > 0 && (
             <div className="mt-16 pt-16 border-t border-border/50">
               <h2 className="text-2xl font-bold mb-8">You May Also Like</h2>
