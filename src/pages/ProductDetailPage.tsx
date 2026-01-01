@@ -11,6 +11,7 @@ import { useCartStore } from "@/stores/cartStore";
 import { ProductCard } from "@/components/products/ProductCard";
 import { StarRating } from "@/components/products/StarRating";
 import { JudgeMeReviews } from "@/components/products/JudgeMeReviews";
+import { LuxuryDescription } from "@/components/products/LuxuryDescription";
 import { toast } from "sonner";
 
 interface ProductNode {
@@ -463,25 +464,21 @@ const ProductDetailPage = () => {
             </div>
           </div>
 
-          {/* Product Description */}
+          {/* Product Description - Luxury Layout */}
           {(product.descriptionHtml || product.description) && (
-            <div className="mt-16 pt-16 border-t border-border/50">
-              <h2 className="text-2xl font-bold mb-6">Product Description</h2>
-              <div className="prose prose-neutral dark:prose-invert max-w-none">
-                {product.descriptionHtml ? (
-                  <div
-                    className="[&_img]:rounded-xl [&_img]:my-8 [&_img]:w-full [&_img]:max-w-xl [&_img]:mx-auto [&_img]:shadow-lg
-                      [&_p]:mb-4 [&_p]:leading-relaxed
-                      [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:mb-4 [&_ul]:space-y-2
-                      [&_li]:text-muted-foreground
-                      [&_strong]:text-foreground [&_strong]:font-semibold
-                      [&_b]:text-foreground [&_b]:font-semibold"
-                    dangerouslySetInnerHTML={{ __html: product.descriptionHtml }}
-                  />
-                ) : (
-                  <p className="whitespace-pre-line">{product.description}</p>
-                )}
+            <div className="mt-20 pt-16 border-t border-border/30">
+              <div className="text-center mb-12">
+                <span className="text-xs font-medium uppercase tracking-[0.25em] text-accent mb-3 block">
+                  Details & Specifications
+                </span>
+                <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Product Description</h2>
               </div>
+              
+              <LuxuryDescription
+                descriptionHtml={product.descriptionHtml}
+                description={product.description}
+                productTitle={product.title}
+              />
             </div>
           )}
 
