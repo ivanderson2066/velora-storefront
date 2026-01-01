@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { Sparkles, Package, Zap, Star, Gem, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
 
@@ -29,17 +29,22 @@ const GalleryCarousel = ({ images, productTitle }: { images: string[]; productTi
     setSelectedIndex(emblaApi.selectedScrollSnap());
   }, [emblaApi]);
 
-  useMemo(() => {
+  // CORREÇÃO: Usar useEffect em vez de useMemo para side-effects (event listeners)
+  useEffect(() => {
     if (!emblaApi) return;
+    onSelect(); // Define o estado inicial
     emblaApi.on("select", onSelect);
+    emblaApi.on("reInit", onSelect);
+    
     return () => {
       emblaApi.off("select", onSelect);
+      emblaApi.off("reInit", onSelect);
     };
   }, [emblaApi, onSelect]);
 
   if (images.length === 1) {
     return (
-      <div className="relative group overflow-hidden rounded-3xl bg-secondary/30 aspect-video">
+      <div className="relative group overflow-hidden rounded-3xl bg-secondary/30 aspect-video max-w-4xl mx-auto">
         <img
           src={images[0]}
           alt={`${productTitle} - Image`}
@@ -51,7 +56,7 @@ const GalleryCarousel = ({ images, productTitle }: { images: string[]; productTi
   }
 
   return (
-    <div className="relative group">
+    <div className="relative group max-w-5xl mx-auto">
       <div className="overflow-hidden rounded-3xl" ref={emblaRef}>
         <div className="flex">
           {images.map((src, i) => (
@@ -74,14 +79,14 @@ const GalleryCarousel = ({ images, productTitle }: { images: string[]; productTi
       {/* Navigation Arrows */}
       <button
         onClick={scrollPrev}
-        className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-background/90 backdrop-blur-sm border border-border/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-background hover:scale-110 shadow-lg"
+        className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-background/90 backdrop-blur-sm border border-border/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-background hover:scale-110 shadow-lg z-10"
         aria-label="Previous image"
       >
         <ChevronLeft className="w-5 h-5" />
       </button>
       <button
         onClick={scrollNext}
-        className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-background/90 backdrop-blur-sm border border-border/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-background hover:scale-110 shadow-lg"
+        className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-background/90 backdrop-blur-sm border border-border/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-background hover:scale-110 shadow-lg z-10"
         aria-label="Next image"
       >
         <ChevronRight className="w-5 h-5" />
@@ -141,6 +146,7 @@ export const LuxuryDescription = ({
     const paragraphs: string[] = [];
     doc.querySelectorAll("p").forEach(p => {
       const text = p.textContent?.trim();
+      // Filter out short paragraphs or ones that might just be image wrappers
       if (text && text.length > 10) paragraphs.push(text);
     });
     
