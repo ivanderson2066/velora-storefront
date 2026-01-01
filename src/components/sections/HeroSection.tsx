@@ -60,8 +60,12 @@ const HeroSection = () => {
           <div className="order-1 lg:order-2 animate-fade-in" style={{ animationDelay: "200ms" }}>
             <div className="relative aspect-[4/5] lg:aspect-[3/4] bg-gradient-to-br from-accent/20 to-secondary rounded-2xl overflow-hidden shadow-2xl">
               <img
-                src="https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&q=80"
-                alt="Modern smart home ambient lighting"
+                // ************************************************************************************************
+                // PARA TROCAR A IMAGEM:
+                // Substitua a URL abaixo pela URL da sua imagem da lâmpada 3 em 1.
+                // ************************************************************************************************
+                src="https://cf.cjdropshipping.com/17085600/2402220237250328700.jpg?x-oss-process=image%2Fformat%2Cwebp" 
+                alt="Modern smart home 3-in-1 lamp"
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-foreground/20 to-transparent" />
@@ -69,7 +73,7 @@ const HeroSection = () => {
               {/* Floating badge */}
               <div className="absolute bottom-6 left-6 right-6 bg-background/95 backdrop-blur-sm rounded-lg p-4 shadow-lg">
                 <p className="text-sm font-medium mb-1">Best Seller</p>
-                <p className="text-xs text-muted-foreground">Anti-Gravity™ Levitating Clock</p>
+                <p className="text-xs text-muted-foreground">3-in-1 Wireless Charging Lamp</p>
               </div>
             </div>
           </div>
