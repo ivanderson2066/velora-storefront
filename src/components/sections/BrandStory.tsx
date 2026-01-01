@@ -7,7 +7,7 @@ const BrandStory = () => {
           <div className="relative">
             <div className="aspect-[4/5] bg-gradient-to-br from-accent/10 to-secondary rounded-lg overflow-hidden">
               <img
-                src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80"
+                src="https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=800&q=80"
                 alt="Smart home technology"
                 className="w-full h-full object-cover"
               />
