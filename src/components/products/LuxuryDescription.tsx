@@ -1,5 +1,6 @@
-import { useMemo } from "react";
-import { Sparkles, Package, Zap, Star, Gem, CheckCircle2 } from "lucide-react";
+import { useMemo, useState, useCallback } from "react";
+import { Sparkles, Package, Zap, Star, Gem, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
+import useEmblaCarousel from "embla-carousel-react";
 
 interface LuxuryDescriptionProps {
   descriptionHtml?: string;
@@ -14,6 +15,96 @@ interface ParsedSection {
   items?: string[];
   images?: string[];
 }
+
+// Gallery Carousel Component
+const GalleryCarousel = ({ images, productTitle }: { images: string[]; productTitle: string }) => {
+  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, dragFree: true });
+  const [selectedIndex, setSelectedIndex] = useState(0);
+
+  const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
+  const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
+
+  const onSelect = useCallback(() => {
+    if (!emblaApi) return;
+    setSelectedIndex(emblaApi.selectedScrollSnap());
+  }, [emblaApi]);
+
+  useMemo(() => {
+    if (!emblaApi) return;
+    emblaApi.on("select", onSelect);
+    return () => {
+      emblaApi.off("select", onSelect);
+    };
+  }, [emblaApi, onSelect]);
+
+  if (images.length === 1) {
+    return (
+      <div className="relative group overflow-hidden rounded-3xl bg-secondary/30 aspect-video">
+        <img
+          src={images[0]}
+          alt={`${productTitle} - Image`}
+          className="w-full h-full object-cover"
+          loading="lazy"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative group">
+      <div className="overflow-hidden rounded-3xl" ref={emblaRef}>
+        <div className="flex">
+          {images.map((src, i) => (
+            <div key={i} className="flex-[0_0_100%] min-w-0 md:flex-[0_0_85%] px-2 first:pl-0 last:pr-0">
+              <div className="relative overflow-hidden rounded-2xl bg-secondary/30 aspect-video">
+                <img
+                  src={src}
+                  alt={`${productTitle} - Image ${i + 1}`}
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  loading="lazy"
+                />
+                {/* Elegant overlay gradient */}
+                <div className="absolute inset-0 bg-gradient-to-t from-background/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Navigation Arrows */}
+      <button
+        onClick={scrollPrev}
+        className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-background/90 backdrop-blur-sm border border-border/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-background hover:scale-110 shadow-lg"
+        aria-label="Previous image"
+      >
+        <ChevronLeft className="w-5 h-5" />
+      </button>
+      <button
+        onClick={scrollNext}
+        className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-background/90 backdrop-blur-sm border border-border/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-background hover:scale-110 shadow-lg"
+        aria-label="Next image"
+      >
+        <ChevronRight className="w-5 h-5" />
+      </button>
+
+      {/* Dots indicator */}
+      <div className="flex justify-center gap-2 mt-6">
+        {images.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => emblaApi?.scrollTo(i)}
+            className={`w-2 h-2 rounded-full transition-all duration-300 ${
+              i === selectedIndex 
+                ? "bg-foreground w-6" 
+                : "bg-foreground/30 hover:bg-foreground/50"
+            }`}
+            aria-label={`Go to image ${i + 1}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
 
 export const LuxuryDescription = ({ 
   descriptionHtml, 
@@ -31,7 +122,6 @@ export const LuxuryDescription = ({
     const doc = parser.parseFromString(html, "text/html");
     
     const sections: ParsedSection[] = [];
-    let currentSection: ParsedSection | null = null;
     
     // Extract images
     const images: string[] = [];
@@ -54,13 +144,6 @@ export const LuxuryDescription = ({
       if (text && text.length > 10) paragraphs.push(text);
     });
     
-    // Extract headings
-    const headings: string[] = [];
-    doc.querySelectorAll("h1, h2, h3, h4, h5, h6, strong, b").forEach(h => {
-      const text = h.textContent?.trim();
-      if (text && text.length > 3 && text.length < 100) headings.push(text);
-    });
-    
     // Create hero section from first paragraph
     if (paragraphs.length > 0) {
       sections.push({
@@ -75,7 +158,7 @@ export const LuxuryDescription = ({
         type: "features",
         title: "Key Features",
         content: "",
-        items: listItems.slice(0, 8), // Max 8 features
+        items: listItems.slice(0, 8),
       });
     }
     
@@ -129,51 +212,56 @@ export const LuxuryDescription = ({
   }
 
   return (
-    <div className="space-y-16">
+    <div className="space-y-20">
       {sections.map((section, index) => (
         <div key={index} className="animate-fade-in" style={{ animationDelay: `${index * 100}ms` }}>
           {section.type === "hero" && (
-            <div className="relative">
-              {/* Decorative element */}
-              <div className="absolute -top-4 left-0 flex items-center gap-2 text-accent">
-                <Sparkles className="w-5 h-5" />
-                <span className="text-xs font-medium uppercase tracking-widest">About This Product</span>
+            <div className="relative max-w-4xl mx-auto text-center">
+              {/* Decorative top line */}
+              <div className="flex items-center justify-center gap-4 mb-8">
+                <div className="h-px w-16 bg-gradient-to-r from-transparent to-border" />
+                <Sparkles className="w-5 h-5 text-accent" />
+                <div className="h-px w-16 bg-gradient-to-l from-transparent to-border" />
               </div>
               
-              <p className="text-xl md:text-2xl leading-relaxed text-foreground/90 font-light mt-8 max-w-3xl">
+              <p className="text-xl md:text-2xl lg:text-3xl leading-relaxed text-foreground/90 font-light">
                 {section.content}
               </p>
               
-              {/* Elegant divider */}
-              <div className="mt-10 flex items-center gap-4">
-                <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
+              {/* Elegant bottom divider */}
+              <div className="mt-12 flex items-center justify-center gap-4">
+                <div className="h-px w-24 bg-gradient-to-r from-transparent via-border to-transparent" />
                 <Gem className="w-4 h-4 text-accent/50" />
-                <div className="h-px flex-1 bg-gradient-to-l from-border to-transparent" />
+                <div className="h-px w-24 bg-gradient-to-r from-transparent via-border to-transparent" />
               </div>
             </div>
           )}
           
           {section.type === "features" && section.items && (
-            <div>
-              <div className="flex items-center gap-3 mb-8">
-                <div className="p-2 rounded-xl bg-accent/10">
-                  <Zap className="w-5 h-5 text-accent" />
+            <div className="max-w-5xl mx-auto">
+              <div className="text-center mb-12">
+                <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-accent/10 mb-4">
+                  <Zap className="w-6 h-6 text-accent" />
                 </div>
-                <h3 className="text-xl font-semibold tracking-tight">{section.title}</h3>
+                <h3 className="text-2xl font-semibold tracking-tight">{section.title}</h3>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {section.items.map((item, i) => (
                   <div 
                     key={i}
-                    className="group flex items-start gap-4 p-5 rounded-2xl bg-secondary/30 border border-border/30 hover:border-accent/30 hover:bg-secondary/50 transition-all duration-300"
+                    className="group relative flex items-start gap-5 p-6 rounded-2xl bg-gradient-to-br from-secondary/40 to-secondary/20 border border-border/20 hover:border-accent/30 hover:from-secondary/60 hover:to-secondary/30 transition-all duration-500"
                   >
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center group-hover:bg-accent/20 transition-colors">
-                      <CheckCircle2 className="w-4 h-4 text-accent" />
+                    {/* Number badge */}
+                    <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-background flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
+                      <CheckCircle2 className="w-5 h-5 text-accent" />
                     </div>
-                    <p className="text-sm text-muted-foreground leading-relaxed pt-1">
+                    <p className="text-base text-muted-foreground leading-relaxed pt-2">
                       {item}
                     </p>
+                    
+                    {/* Hover glow effect */}
+                    <div className="absolute inset-0 rounded-2xl bg-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
                   </div>
                 ))}
               </div>
@@ -181,76 +269,52 @@ export const LuxuryDescription = ({
           )}
           
           {section.type === "gallery" && section.images && (
-            <div className="space-y-6">
-              <div className="flex items-center gap-3 mb-8">
-                <div className="p-2 rounded-xl bg-accent/10">
-                  <Star className="w-5 h-5 text-accent" />
+            <div className="space-y-8">
+              <div className="text-center mb-10">
+                <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-accent/10 mb-4">
+                  <Star className="w-6 h-6 text-accent" />
                 </div>
-                <h3 className="text-xl font-semibold tracking-tight">Product Gallery</h3>
+                <h3 className="text-2xl font-semibold tracking-tight">Product Gallery</h3>
+                <p className="text-sm text-muted-foreground mt-2">Swipe to explore</p>
               </div>
               
-              <div className={`grid gap-6 ${
-                section.images.length === 1 
-                  ? "grid-cols-1" 
-                  : section.images.length === 2 
-                    ? "grid-cols-1 md:grid-cols-2" 
-                    : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
-              }`}>
-                {section.images.map((src, i) => (
-                  <div 
-                    key={i}
-                    className="relative group overflow-hidden rounded-2xl bg-secondary/30 aspect-square"
-                  >
-                    <img
-                      src={src}
-                      alt={`${productTitle} - Image ${i + 1}`}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      loading="lazy"
-                    />
-                    {/* Elegant overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  </div>
-                ))}
-              </div>
+              <GalleryCarousel images={section.images} productTitle={productTitle} />
             </div>
           )}
           
           {section.type === "benefits" && (
-            <div className="relative">
-              <div className="flex items-center gap-3 mb-8">
-                <div className="p-2 rounded-xl bg-accent/10">
-                  <Package className="w-5 h-5 text-accent" />
+            <div className="max-w-4xl mx-auto">
+              <div className="text-center mb-10">
+                <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-accent/10 mb-4">
+                  <Package className="w-6 h-6 text-accent" />
                 </div>
-                <h3 className="text-xl font-semibold tracking-tight">{section.title}</h3>
+                <h3 className="text-2xl font-semibold tracking-tight">{section.title}</h3>
               </div>
               
-              <div className="relative p-8 rounded-3xl bg-gradient-to-br from-secondary/50 via-secondary/30 to-transparent border border-border/30">
-                {/* Corner accents */}
-                <div className="absolute top-0 left-0 w-16 h-16 border-l-2 border-t-2 border-accent/20 rounded-tl-3xl" />
-                <div className="absolute bottom-0 right-0 w-16 h-16 border-r-2 border-b-2 border-accent/20 rounded-br-3xl" />
+              <div className="relative p-10 md:p-12 rounded-3xl bg-gradient-to-br from-secondary/50 via-secondary/30 to-background border border-border/20">
+                {/* Corner decorations */}
+                <div className="absolute top-0 left-0 w-20 h-20 border-l-2 border-t-2 border-accent/20 rounded-tl-3xl" />
+                <div className="absolute top-0 right-0 w-20 h-20 border-r-2 border-t-2 border-accent/20 rounded-tr-3xl" />
+                <div className="absolute bottom-0 left-0 w-20 h-20 border-l-2 border-b-2 border-accent/20 rounded-bl-3xl" />
+                <div className="absolute bottom-0 right-0 w-20 h-20 border-r-2 border-b-2 border-accent/20 rounded-br-3xl" />
                 
-                <p className="text-base leading-relaxed text-muted-foreground max-w-2xl">
+                <p className="text-lg leading-relaxed text-muted-foreground text-center">
                   {section.content}
                 </p>
               </div>
             </div>
-          )}
-          
-          {section.type === "text" && (
-            <p className="text-base leading-relaxed text-muted-foreground">
-              {section.content}
-            </p>
           )}
         </div>
       ))}
       
       {/* Premium footer badge */}
       <div className="flex justify-center pt-8">
-        <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-secondary/50 border border-border/30">
-          <Gem className="w-4 h-4 text-accent" />
-          <span className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+        <div className="inline-flex items-center gap-3 px-8 py-4 rounded-full bg-gradient-to-r from-secondary/60 via-secondary/40 to-secondary/60 border border-border/30 shadow-lg">
+          <Gem className="w-5 h-5 text-accent" />
+          <span className="text-sm font-medium uppercase tracking-[0.15em] text-foreground/80">
             Premium Quality Guaranteed
           </span>
+          <Gem className="w-5 h-5 text-accent" />
         </div>
       </div>
     </div>

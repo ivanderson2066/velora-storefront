@@ -12,6 +12,7 @@ import { ProductCard } from "@/components/products/ProductCard";
 import { StarRating } from "@/components/products/StarRating";
 import { JudgeMeReviews } from "@/components/products/JudgeMeReviews";
 import { LuxuryDescription } from "@/components/products/LuxuryDescription";
+import { ProductImageCarousel } from "@/components/products/ProductImageCarousel";
 import { toast } from "sonner";
 
 interface ProductNode {
@@ -269,41 +270,14 @@ const ProductDetailPage = () => {
           </Link>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
-            {/* Images */}
-            <div className="space-y-4">
-              <div className="aspect-square bg-secondary rounded-lg overflow-hidden">
-                {images[selectedImage]?.node ? (
-                  <img
-                    src={images[selectedImage].node.url}
-                    alt={images[selectedImage].node.altText || product.title}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                    No image
-                  </div>
-                )}
-              </div>
-              
-              {images.length > 1 && (
-                <div className="flex gap-3 overflow-x-auto pb-2">
-                  {images.map((img, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setSelectedImage(index)}
-                      className={`w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden border-2 transition-colors ${
-                        selectedImage === index ? "border-foreground" : "border-transparent"
-                      }`}
-                    >
-                      <img
-                        src={img.node.url}
-                        alt={img.node.altText || `${product.title} ${index + 1}`}
-                        className="w-full h-full object-cover"
-                      />
-                    </button>
-                  ))}
-                </div>
-              )}
+            {/* Images - Swipeable Carousel */}
+            <div>
+              <ProductImageCarousel
+                images={images}
+                productTitle={product.title}
+                selectedIndex={selectedImage}
+                onSelectImage={setSelectedImage}
+              />
             </div>
 
             {/* Product Info */}

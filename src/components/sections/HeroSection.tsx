@@ -60,7 +60,7 @@ const HeroSection = () => {
           <div className="order-1 lg:order-2 animate-fade-in" style={{ animationDelay: "200ms" }}>
             <div className="relative aspect-[4/5] lg:aspect-[3/4] bg-gradient-to-br from-accent/20 to-secondary rounded-2xl overflow-hidden shadow-2xl">
               <img
-                src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80"
+                src="https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&q=80"
                 alt="Modern smart home ambient lighting"
                 className="w-full h-full object-cover"
               />
