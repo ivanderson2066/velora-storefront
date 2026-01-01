@@ -12,9 +12,8 @@ const FeaturedCollection = () => {
   useEffect(() => {
     const loadProducts = async () => {
       try {
-        // MUDANÇA: Buscar 6 produtos para preencher 3 linhas no mobile (2x3) e 2 linhas "cheias" no desktop dependendo da largura, ou 1 linha e meia. 
-        // Se preferir 4 (uma linha desktop) ou 8 (duas linhas), ajuste aqui. 6 é um bom equilíbrio.
-        const data = await fetchProducts(6);
+        // Buscar 5 produtos principais para exibir na home (mostrar 5 tanto no desktop quanto no mobile)
+        const data = await fetchProducts(5);
         setProducts(data);
       } catch (error) {
         console.error("Failed to load products:", error);
