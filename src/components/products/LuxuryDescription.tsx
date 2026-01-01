@@ -42,34 +42,40 @@ const GalleryCarousel = ({ images, productTitle }: { images: string[]; productTi
     };
   }, [emblaApi, onSelect]);
 
+  // CASO 1: Apenas uma imagem (Hero Image da descrição)
   if (images.length === 1) {
     return (
-      <div className="relative group overflow-hidden rounded-3xl bg-secondary/30 aspect-video max-w-4xl mx-auto">
+      <div className="relative group rounded-3xl overflow-hidden bg-transparent max-w-4xl mx-auto">
         <img
           src={images[0]}
           alt={`${productTitle} - Image`}
-          className="w-full h-full object-cover"
+          // AQUI ESTÁ O SEGREDO:
+          // h-auto: A altura ajusta-se à imagem (não força tamanho fixo)
+          // max-h-[600px]: Impede que fique gigante em ecrãs grandes
+          // object-contain: Garante que a imagem nunca é cortada
+          className="w-full h-auto max-h-[600px] object-contain mx-auto rounded-2xl shadow-sm border border-border/10"
           loading="lazy"
         />
       </div>
     );
   }
 
+  // CASO 2: Carrossel (várias imagens)
   return (
     <div className="relative group max-w-5xl mx-auto">
       <div className="overflow-hidden rounded-3xl" ref={emblaRef}>
         <div className="flex">
           {images.map((src, i) => (
             <div key={i} className="flex-[0_0_100%] min-w-0 md:flex-[0_0_85%] px-2 first:pl-0 last:pr-0">
-              <div className="relative overflow-hidden rounded-2xl bg-secondary/30 aspect-video">
+              {/* O container tem tamanho fixo (aspect-video) para o carrossel ficar alinhado */}
+              <div className="relative overflow-hidden rounded-2xl bg-secondary/5 aspect-video flex items-center justify-center border border-border/10">
                 <img
                   src={src}
                   alt={`${productTitle} - Image ${i + 1}`}
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  // AQUI TAMBÉM: object-contain faz a imagem "flutuar" no centro sem cortes
+                  className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105"
                   loading="lazy"
                 />
-                {/* Elegant overlay gradient */}
-                <div className="absolute inset-0 bg-gradient-to-t from-background/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               </div>
             </div>
           ))}
