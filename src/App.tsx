@@ -22,6 +22,24 @@ import FAQPage from "./pages/FAQPage";
 import ShippingPolicyPage from "./pages/ShippingPolicyPage";
 import RefundPolicyPage from "./pages/RefundPolicyPage";
 import { useCartStore } from "@/stores/cartStore";
+import { useFacebookPixel } from "@/hooks/useFacebookPixel";
+
+// Componente interno para inicializar hooks que dependem do Router
+const AppInitializer = () => {
+  const syncPrices = useCartStore(state => state.syncPrices);
+  const items = useCartStore(state => state.items);
+  
+  // Inicializa Facebook Pixel e rastreia mudanças de página
+  useFacebookPixel();
+  
+  useEffect(() => {
+    if (items.length > 0) {
+      void syncPrices();
+    }
+  }, [items.length, syncPrices]);
+  
+  return null;
+};
 
 const queryClient = new QueryClient();
 
@@ -109,16 +127,7 @@ const App = () => {
             <Toaster />
             <Sonner />
             <BrowserRouter>
-              {(() => {
-                const syncPrices = useCartStore(state => state.syncPrices);
-                const items = useCartStore(state => state.items);
-                useEffect(() => {
-                  if (items.length > 0) {
-                    void syncPrices();
-                  }
-                }, [items.length, syncPrices]);
-                return null;
-              })()}
+              <AppInitializer />
               <ScrollToTop />
               <Routes>
                 <Route path="/" element={<Index />} />

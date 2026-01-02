@@ -11,6 +11,7 @@ import {
 import { ShoppingBag, Minus, Plus, Trash2, ExternalLink, Loader2 } from "lucide-react";
 import { useCartStore } from "@/stores/cartStore";
 import { toast } from "sonner";
+import { trackInitiateCheckout, extractShopifyId } from "@/lib/fbPixel";
 
 export const CartDrawer = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -32,6 +33,23 @@ export const CartDrawer = () => {
     : 'USD';
 
   const handleCheckout = async () => {
+    // Facebook Pixel: InitiateCheckout
+    if (items.length > 0) {
+      const contentIds = items.map(item => extractShopifyId(item.product?.node?.id || item.variantId));
+      const contents = items.map(item => ({
+        id: extractShopifyId(item.product?.node?.id || item.variantId),
+        quantity: item.quantity,
+      }));
+      
+      trackInitiateCheckout({
+        content_ids: contentIds,
+        contents,
+        num_items: totalItems,
+        value: totalPrice,
+        currency: subtotalCurrency,
+      });
+    }
+
     try {
       const checkoutUrl = await createCheckout();
       if (checkoutUrl) {
