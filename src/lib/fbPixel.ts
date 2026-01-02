@@ -9,7 +9,7 @@
 // ============================================
 // ⚠️ CONFIGURE SEU PIXEL ID AQUI ⚠️
 // ============================================
-const FB_PIXEL_ID = 'YOUR_PIXEL_ID_HERE'; // Substitua pelo seu Pixel ID real
+const FB_PIXEL_ID = '1936344623982424';
 // ============================================
 
 declare global {
@@ -24,8 +24,8 @@ declare global {
  * Deve ser chamado uma vez quando o app carregar
  */
 export function initFacebookPixel(): void {
-  if (FB_PIXEL_ID === 'YOUR_PIXEL_ID_HERE') {
-    console.warn('[Facebook Pixel] Pixel ID não configurado. Edite src/lib/fbPixel.ts');
+  if (!FB_PIXEL_ID) {
+    console.warn('[Facebook Pixel] Pixel ID não configurado.');
     return;
   }
 
@@ -71,7 +71,7 @@ export function initFacebookPixel(): void {
  * Verifica se o Pixel está configurado e ativo
  */
 function isPixelReady(): boolean {
-  return FB_PIXEL_ID !== 'YOUR_PIXEL_ID_HERE' && typeof window !== 'undefined' && !!window.fbq;
+  return !!FB_PIXEL_ID && typeof window !== 'undefined' && !!window.fbq;
 }
 
 /**
