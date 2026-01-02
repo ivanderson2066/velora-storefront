@@ -2,76 +2,99 @@
  * Facebook Pixel Integration
  * 
  * Este módulo gerencia o Facebook Pixel para rastreamento de eventos e-commerce.
- * 
- * IMPORTANTE: Configure seu Pixel ID abaixo antes de usar.
  */
 
 // ============================================
-// ⚠️ CONFIGURE SEU PIXEL ID AQUI ⚠️
+// PIXEL ID CONFIGURADO
 // ============================================
 const FB_PIXEL_ID = '1936344623982424';
 // ============================================
 
 declare global {
   interface Window {
-    fbq: (...args: unknown[]) => void;
-    _fbq: unknown;
+    fbq?: (...args: unknown[]) => void;
+    _fbq?: unknown;
   }
 }
+
+let pixelInitialized = false;
 
 /**
  * Inicializa o Facebook Pixel
  * Deve ser chamado uma vez quando o app carregar
  */
 export function initFacebookPixel(): void {
-  if (!FB_PIXEL_ID) {
-    console.warn('[Facebook Pixel] Pixel ID não configurado.');
-    return;
-  }
+  try {
+    if (!FB_PIXEL_ID) {
+      return;
+    }
 
-  if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined') return;
 
-  // Evita inicialização dupla
-  if (window.fbq) return;
+    // Evita inicialização dupla
+    if (pixelInitialized || window.fbq) {
+      console.log('[Facebook Pixel] Já inicializado, pulando...');
+      return;
+    }
 
-  // Facebook Pixel base code
-  const f = window as Window;
-  const n = function (...args: unknown[]) {
+    pixelInitialized = true;
+
+    // Facebook Pixel base code
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (n as any).callMethod
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ? (n as any).callMethod.apply(n, args)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      : (n as any).queue.push(args);
-  };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (n as any).push = n;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (n as any).loaded = true;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (n as any).version = '2.0';
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (n as any).queue = [];
-  f.fbq = n;
+    const n: any = function (...args: unknown[]) {
+      if (n.callMethod) {
+        n.callMethod.apply(n, args);
+      } else {
+        n.queue.push(args);
+      }
+    };
+    n.push = n;
+    n.loaded = true;
+    n.version = '2.0';
+    n.queue = [];
+    window.fbq = n;
 
-  // Carrega o script do Facebook Pixel
-  const script = document.createElement('script');
-  script.async = true;
-  script.src = 'https://connect.facebook.net/en_US/fbevents.js';
-  document.head.appendChild(script);
+    // Carrega o script do Facebook Pixel
+    const script = document.createElement('script');
+    script.async = true;
+    script.src = 'https://connect.facebook.net/en_US/fbevents.js';
+    script.onerror = () => {
+      console.warn('[Facebook Pixel] Falha ao carregar script');
+    };
+    document.head.appendChild(script);
 
-  // Inicializa o pixel
-  window.fbq('init', FB_PIXEL_ID);
-  window.fbq('track', 'PageView');
+    // Inicializa o pixel
+    window.fbq('init', FB_PIXEL_ID);
+    window.fbq('track', 'PageView');
 
-  console.log('[Facebook Pixel] Inicializado com sucesso');
+    console.log('[Facebook Pixel] Inicializado com sucesso');
+  } catch (error) {
+    console.warn('[Facebook Pixel] Erro na inicialização:', error);
+  }
 }
 
 /**
  * Verifica se o Pixel está configurado e ativo
  */
 function isPixelReady(): boolean {
-  return !!FB_PIXEL_ID && typeof window !== 'undefined' && !!window.fbq;
+  try {
+    return !!FB_PIXEL_ID && typeof window !== 'undefined' && typeof window.fbq === 'function';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Executa chamada do pixel com segurança
+ */
+function safePixelCall(callback: () => void): void {
+  try {
+    if (isPixelReady()) {
+      callback();
+    }
+  } catch (error) {
+    console.warn('[Facebook Pixel] Erro ao rastrear evento:', error);
+  }
 }
 
 /**
@@ -79,8 +102,9 @@ function isPixelReady(): boolean {
  * Chamado automaticamente em mudanças de rota
  */
 export function trackPageView(): void {
-  if (!isPixelReady()) return;
-  window.fbq('track', 'PageView');
+  safePixelCall(() => {
+    window.fbq?.('track', 'PageView');
+  });
 }
 
 /**
@@ -93,8 +117,9 @@ export function trackViewContent(params: {
   value: number;
   currency: string;
 }): void {
-  if (!isPixelReady()) return;
-  window.fbq('track', 'ViewContent', params);
+  safePixelCall(() => {
+    window.fbq?.('track', 'ViewContent', params);
+  });
 }
 
 /**
@@ -107,8 +132,9 @@ export function trackAddToCart(params: {
   value: number;
   currency: string;
 }): void {
-  if (!isPixelReady()) return;
-  window.fbq('track', 'AddToCart', params);
+  safePixelCall(() => {
+    window.fbq?.('track', 'AddToCart', params);
+  });
 }
 
 /**
@@ -121,8 +147,9 @@ export function trackInitiateCheckout(params: {
   value: number;
   currency: string;
 }): void {
-  if (!isPixelReady()) return;
-  window.fbq('track', 'InitiateCheckout', params);
+  safePixelCall(() => {
+    window.fbq?.('track', 'InitiateCheckout', params);
+  });
 }
 
 /**
@@ -135,47 +162,55 @@ export function trackPurchase(params: {
   value: number;
   currency: string;
 }): void {
-  if (!isPixelReady()) return;
-  window.fbq('track', 'Purchase', params);
+  safePixelCall(() => {
+    window.fbq?.('track', 'Purchase', params);
+  });
 }
 
 /**
  * Rastreia pesquisa
  */
 export function trackSearch(searchString: string): void {
-  if (!isPixelReady()) return;
-  window.fbq('track', 'Search', { search_string: searchString });
+  safePixelCall(() => {
+    window.fbq?.('track', 'Search', { search_string: searchString });
+  });
 }
 
 /**
  * Rastreia lead (contato)
  */
 export function trackLead(): void {
-  if (!isPixelReady()) return;
-  window.fbq('track', 'Lead');
+  safePixelCall(() => {
+    window.fbq?.('track', 'Lead');
+  });
 }
 
 /**
  * Rastreia registro completo
  */
 export function trackCompleteRegistration(): void {
-  if (!isPixelReady()) return;
-  window.fbq('track', 'CompleteRegistration');
+  safePixelCall(() => {
+    window.fbq?.('track', 'CompleteRegistration');
+  });
 }
 
 /**
  * Rastreia evento customizado
  */
 export function trackCustomEvent(eventName: string, params?: Record<string, unknown>): void {
-  if (!isPixelReady()) return;
-  window.fbq('trackCustom', eventName, params);
+  safePixelCall(() => {
+    window.fbq?.('trackCustom', eventName, params);
+  });
 }
 
 /**
  * Extrai o ID numérico do Shopify de um GID
  */
 export function extractShopifyId(gid: string): string {
-  // gid://shopify/Product/123456 -> 123456
-  const match = gid.match(/\/(\d+)$/);
-  return match ? match[1] : gid;
+  try {
+    const match = gid.match(/\/(\d+)$/);
+    return match ? match[1] : gid;
+  } catch {
+    return gid;
+  }
 }
