@@ -48,8 +48,9 @@ export const ProductCard = ({ product }: ProductCardProps) => {
             <img
               src={image.url}
               alt={image.altText || node.title}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-slow"
+              className="w-full h-full object-contain bg-background group-hover:scale-105 transition-transform duration-slow"
             />
+
           ) : (
             <div className="w-full h-full flex items-center justify-center text-muted-foreground">
               No image
