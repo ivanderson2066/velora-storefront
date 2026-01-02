@@ -14,6 +14,7 @@ import { JudgeMeReviews } from "@/components/products/JudgeMeReviews";
 import { LuxuryDescription } from "@/components/products/LuxuryDescription";
 import { ProductImageCarousel } from "@/components/products/ProductImageCarousel";
 import { toast } from "sonner";
+import { trackViewContent, trackAddToCart, trackInitiateCheckout, extractShopifyId } from "@/lib/fbPixel";
 
 interface ProductNode {
   id: string;
@@ -98,6 +99,18 @@ const ProductDetailPage = () => {
           setSelectedVariant(productData.variants.edges[0].node);
         }
 
+        // Facebook Pixel: ViewContent
+        if (productData) {
+          const price = parseFloat(productData.priceRange.minVariantPrice.amount);
+          trackViewContent({
+            content_name: productData.title,
+            content_ids: [extractShopifyId(productData.id)],
+            content_type: 'product',
+            value: price,
+            currency: productData.priceRange.minVariantPrice.currencyCode,
+          });
+        }
+
         const related = allProducts.filter(p => p.node.handle !== handle).slice(0, 4);
         setRelatedProducts(related);
       } catch (error) {
@@ -159,6 +172,17 @@ const ProductDetailPage = () => {
       price: priceObj,
       quantity,
       selectedOptions: selectedVariant.selectedOptions || [],
+    });
+
+    // Facebook Pixel: AddToCart
+    const price = latestUnitPrice ?? parseFloat(selectedVariant.price.amount);
+    const currency = latestCurrency ?? selectedVariant.price.currencyCode;
+    trackAddToCart({
+      content_name: product.title,
+      content_ids: [extractShopifyId(product.id)],
+      content_type: 'product',
+      value: price * quantity,
+      currency,
     });
 
     toast.success("Added to cart", {
