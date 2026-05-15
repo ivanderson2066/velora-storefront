@@ -23,6 +23,10 @@ import ShippingPolicyPage from "./pages/ShippingPolicyPage";
 import RefundPolicyPage from "./pages/RefundPolicyPage";
 import { useCartStore } from "@/stores/cartStore";
 import { useFacebookPixel } from "@/hooks/useFacebookPixel";
+import { I18nProvider } from "@/lib/i18n";
+import ProductsPage from "./pages/ProductsPage";
+import AdminPage from "./pages/AdminPage";
+import CheckoutSuccessPage from "./pages/CheckoutSuccessPage";
 
 // Componente interno para inicializar hooks que dependem do Router
 const AppInitializer = () => {
@@ -122,6 +126,7 @@ const App = () => {
   return (
     <HelmetProvider>
       <QueryClientProvider client={queryClient}>
+        <I18nProvider>
         <TooltipProvider>
           <ErrorBoundary>
             <Toaster />
@@ -145,6 +150,9 @@ const App = () => {
                 <Route path="/shipping" element={<PolicyPage />} />
                 <Route path="/terms" element={<TermsPage />} />
                 <Route path="/terms-of-service" element={<TermsPage />} />
+                <Route path="/products" element={<ProductsPage />} />
+                <Route path="/admin" element={<AdminPage />} />
+                <Route path="/checkout/success" element={<CheckoutSuccessPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
 
@@ -166,6 +174,7 @@ const App = () => {
             </BrowserRouter>
           </ErrorBoundary>
         </TooltipProvider>
+        </I18nProvider>
       </QueryClientProvider>
     </HelmetProvider>
   );

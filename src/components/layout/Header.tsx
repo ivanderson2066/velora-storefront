@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Menu, X, Search, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CartDrawer } from "@/components/cart/CartDrawer";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -82,6 +83,7 @@ const Header = () => {
             <Button variant="ghost" size="icon" className="hidden lg:flex">
               <Search className="w-5 h-5" />
             </Button>
+            <LanguageSwitcher />
             <CartDrawer />
           </div>
         </div>
