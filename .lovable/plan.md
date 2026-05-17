@@ -1,43 +1,27 @@
-# Plano
+## Plano
 
-## 1. Corrigir o erro do checkout (edge function)
+1. Corrigir a origem dos produtos exibidos na vitrine
+   - A home e a página `/shop` hoje dependem da Storefront API externa, e a requisição está falhando no preview (`Failed to fetch`).
+   - Vou criar um fallback usando a tabela `products` do backend do app, que já é alimentada pelo admin e já salva `image_url` permanente do bucket `product-images`.
+   - Assim, quando Shopify falhar ou retornar vazio, a vitrine ainda mostra os produtos cadastrados no admin com as imagens salvas.
 
-O arquivo `supabase/functions/create-checkout/index.ts` importa `corsHeaders` de um caminho inexistente (`npm:@supabase/supabase-js@2/cors`). Isso quebra a função e provavelmente é a causa de erros ao clicar em "Comprar". Vou:
+2. Normalizar o formato dos produtos locais para reaproveitar os componentes existentes
+   - Vou adicionar helpers em `src/lib/shopify.ts` para converter produtos do backend local para o formato `ShopifyProduct` já usado por `ProductCard`, carrinho e páginas.
+   - Para produto local, criarei uma variante padrão compatível com o carrinho e checkout atual do backend.
 
-- Definir `corsHeaders` inline no próprio arquivo (padrão Supabase).
-- Manter toda a lógica de Stripe Checkout existente.
+3. Evitar imagem quebrada nos cards e carrossel
+   - Vou ajustar os componentes de imagem para ter fallback visual quando a URL estiver vazia ou falhar ao carregar.
+   - Também vou garantir que o carrossel do detalhe não tente renderizar `src` indefinido quando não houver imagens.
 
-Observação: o "Script error" genérico no console vem do widget externo da **Judge.me** (cross-origin), não do nosso código — não é corrigível pelo nosso lado.
+4. Corrigir textos/HTML visíveis no mobile
+   - O print mostra `We&apos;re here to help` aparecendo literalmente. Vou trocar por apóstrofo normal para renderizar corretamente.
 
-## 2. Upload de imagem real (em vez de URL)
+5. Testar tudo no preview
+   - Testar mobile na home: hero, trust bar, seção de produtos e imagens.
+   - Testar `/shop`: produtos e imagens.
+   - Testar clique em produto/adicionar ao carrinho quando houver produtos.
+   - Revisar console e network para confirmar que não há erro novo do app.
 
-Hoje o admin só aceita uma URL pública. Vou trocar por upload de arquivo armazenado no backend.
+## Observação técnica
 
-**Migração de banco** (`supabase--migration`):
-- Criar bucket público `product-images` em `storage.buckets`.
-- Policies em `storage.objects`:
-  - Leitura pública para o bucket.
-  - INSERT / UPDATE / DELETE apenas para usuários com `has_role(auth.uid(), 'admin')`.
-
-**AdminPage.tsx**:
-- Trocar o campo "Image URL" por `<Input type="file" accept="image/*">`.
-- Ao salvar: fazer upload via `supabase.storage.from('product-images').upload(...)`, obter `getPublicUrl`, e gravar essa URL em `products.image_url`.
-- Mostrar preview da imagem atual ao editar; permitir trocar.
-- Adicionar barra de progresso/estado de "Enviando…".
-
-**ProductsPage** e Stripe Checkout continuam funcionando sem mudança — só consomem `image_url`.
-
-## 3. Página que estava faltando
-
-Criar `src/pages/CheckoutCancelPage.tsx` (rota `/checkout/cancel`) para casos onde o cliente cancela o pagamento na Stripe. Atualizar `cancel_url` na edge function para apontar para ela. Adicionar strings nos dicionários `en`/`pt`.
-
-## 4. Arquivos afetados
-
-- `supabase/functions/create-checkout/index.ts` — corrigir import e cancel_url
-- `supabase/migrations/...` — bucket + policies de storage
-- `src/pages/AdminPage.tsx` — upload de imagem
-- `src/pages/CheckoutCancelPage.tsx` — nova página
-- `src/App.tsx` — registrar rota `/checkout/cancel`
-- `src/lib/i18n.tsx` — novas strings (upload, cancel)
-
-Pronto para implementar?
+A imagem do hero está carregando corretamente. O problema principal visível agora é que a Storefront API externa falha no preview, então a grade fica em “No products found”. O fallback para produtos do backend resolve isso e usa as imagens permanentes salvas pelo admin, em vez de depender apenas de URLs externas temporárias.

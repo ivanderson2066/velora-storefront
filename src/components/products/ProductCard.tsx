@@ -49,6 +49,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
               src={image.url}
               alt={image.altText || node.title}
               className="w-full h-full object-contain bg-background group-hover:scale-105 transition-transform duration-slow"
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
             />
 
           ) : (
