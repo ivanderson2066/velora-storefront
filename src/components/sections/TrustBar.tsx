@@ -5,7 +5,7 @@ const TrustBar = () => {
     { title: "Free US Shipping", subtitle: "On orders over $50" },
     { title: "30-Day Returns", subtitle: "Hassle-free returns" },
     { title: "Secure Payment", subtitle: "SSL encrypted checkout" },
-    { title: "24/7 Support", subtitle: "We&apos;re here to help" },
+    { title: "24/7 Support", subtitle: "We're here to help" },
   ];
 
   return (
