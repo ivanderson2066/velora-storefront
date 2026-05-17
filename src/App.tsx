@@ -27,6 +27,7 @@ import { I18nProvider } from "@/lib/i18n";
 import ProductsPage from "./pages/ProductsPage";
 import AdminPage from "./pages/AdminPage";
 import CheckoutSuccessPage from "./pages/CheckoutSuccessPage";
+import CheckoutCancelPage from "./pages/CheckoutCancelPage";
 
 // Componente interno para inicializar hooks que dependem do Router
 const AppInitializer = () => {
@@ -153,6 +154,7 @@ const App = () => {
                 <Route path="/products" element={<ProductsPage />} />
                 <Route path="/admin" element={<AdminPage />} />
                 <Route path="/checkout/success" element={<CheckoutSuccessPage />} />
+                <Route path="/checkout/cancel" element={<CheckoutCancelPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
 

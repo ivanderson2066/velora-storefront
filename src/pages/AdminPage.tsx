@@ -44,6 +44,8 @@ export default function AdminPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [form, setForm] = useState(empty);
   const [editing, setEditing] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -105,30 +107,53 @@ export default function AdminPage() {
     await supabase.auth.signOut();
   };
 
+  const uploadImage = async (file: File): Promise<string> => {
+    const ext = file.name.split(".").pop() || "jpg";
+    const path = `${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage
+      .from("product-images")
+      .upload(path, file, { cacheControl: "3600", upsert: false });
+    if (error) throw error;
+    const { data } = supabase.storage.from("product-images").getPublicUrl(path);
+    return data.publicUrl;
+  };
+
   const handleSave = async (e: FormEvent) => {
     e.preventDefault();
-    const priceCents = Math.round(parseFloat(form.price_usd || "0") * 100);
-    const payload = {
-      name: form.name,
-      description: form.description || null,
-      price_cents: priceCents,
-      currency: "usd",
-      image_url: form.image_url || null,
-      active: form.active,
-    };
+    try {
+      setUploading(true);
+      let image_url = form.image_url || null;
+      if (imageFile) {
+        image_url = await uploadImage(imageFile);
+      }
+      const priceCents = Math.round(parseFloat(form.price_usd || "0") * 100);
+      const payload = {
+        name: form.name,
+        description: form.description || null,
+        price_cents: priceCents,
+        currency: "usd",
+        image_url,
+        active: form.active,
+      };
 
-    if (editing && form.id) {
-      const { error } = await supabase.from("products").update(payload).eq("id", form.id);
-      if (error) return toast.error(error.message);
-      toast.success("Updated");
-    } else {
-      const { error } = await supabase.from("products").insert(payload);
-      if (error) return toast.error(error.message);
-      toast.success("Created");
+      if (editing && form.id) {
+        const { error } = await supabase.from("products").update(payload).eq("id", form.id);
+        if (error) throw error;
+        toast.success("Updated");
+      } else {
+        const { error } = await supabase.from("products").insert(payload);
+        if (error) throw error;
+        toast.success("Created");
+      }
+      setForm(empty);
+      setImageFile(null);
+      setEditing(false);
+      void loadProducts();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setUploading(false);
     }
-    setForm(empty);
-    setEditing(false);
-    void loadProducts();
   };
 
   const handleEdit = (p: Product) => {
@@ -224,19 +249,31 @@ export default function AdminPage() {
                 <Label>{t("admin.price")}</Label>
                 <Input type="number" step="0.01" min="0" value={form.price_usd} onChange={(e) => setForm({ ...form, price_usd: e.target.value })} required />
               </div>
-              <div>
-                <Label>{t("admin.image")}</Label>
-                <Input type="url" value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} />
-              </div>
+            </div>
+            <div>
+              <Label>{t("admin.image_file")}</Label>
+              {form.image_url && !imageFile && (
+                <div className="mb-2 flex items-center gap-3">
+                  <img src={form.image_url} alt="" className="w-20 h-20 object-cover rounded border" />
+                  <span className="text-xs text-muted-foreground">{t("admin.replace_image")}</span>
+                </div>
+              )}
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
+              />
             </div>
             <div className="flex items-center gap-2">
               <Switch checked={form.active} onCheckedChange={(v) => setForm({ ...form, active: v })} />
               <Label>{t("admin.active")}</Label>
             </div>
             <div className="flex gap-2">
-              <Button type="submit">{t("admin.save")}</Button>
+              <Button type="submit" disabled={uploading}>
+                {uploading ? t("admin.uploading") : t("admin.save")}
+              </Button>
               {editing && (
-                <Button type="button" variant="outline" onClick={() => { setForm(empty); setEditing(false); }}>
+                <Button type="button" variant="outline" onClick={() => { setForm(empty); setImageFile(null); setEditing(false); }}>
                   {t("admin.cancel")}
                 </Button>
               )}

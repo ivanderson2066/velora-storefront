@@ -1,6 +1,12 @@
-import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import Stripe from "npm:stripe@17.7.0";
 import { createClient } from "npm:@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -44,7 +50,6 @@ Deno.serve(async (req) => {
     }
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2024-11-20.acacia" });
-
     const origin = req.headers.get("origin") ?? "https://example.com";
 
     const session = await stripe.checkout.sessions.create({
@@ -65,7 +70,7 @@ Deno.serve(async (req) => {
       ],
       locale: locale === "pt" ? "pt-BR" : "en",
       success_url: `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/`,
+      cancel_url: `${origin}/checkout/cancel`,
     });
 
     return new Response(JSON.stringify({ url: session.url }), {
