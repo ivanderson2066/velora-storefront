@@ -1,4 +1,5 @@
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const SHOPIFY_API_VERSION = '2025-07';
 const SHOPIFY_STORE_PERMANENT_DOMAIN = 'fwd9jn-1p.myshopify.com';
@@ -236,13 +237,84 @@ export function parseReviewData(product: ShopifyProduct['node'] | { reviewRating
   }
 }
 
+function localToShopifyProduct(p: {
+  id: string;
+  name: string;
+  description: string | null;
+  price_cents: number;
+  currency: string;
+  image_url: string | null;
+}): ShopifyProduct {
+  const amount = (p.price_cents / 100).toFixed(2);
+  const currencyCode = (p.currency || "USD").toUpperCase();
+  const handle = `local-${p.id}`;
+  const variantId = `local-variant-${p.id}`;
+  const images = p.image_url
+    ? { edges: [{ node: { url: p.image_url, altText: p.name } }] }
+    : { edges: [] };
+  return {
+    node: {
+      id: `local-${p.id}`,
+      title: p.name,
+      description: p.description ?? "",
+      descriptionHtml: p.description ?? "",
+      handle,
+      priceRange: { minVariantPrice: { amount, currencyCode } },
+      images,
+      variants: {
+        edges: [{
+          node: {
+            id: variantId,
+            title: "Default Title",
+            price: { amount, currencyCode },
+            availableForSale: true,
+            selectedOptions: [],
+          },
+        }],
+      },
+      options: [],
+    },
+  };
+}
+
+async function fetchLocalProducts(limit: number): Promise<ShopifyProduct[]> {
+  try {
+    const { data, error } = await supabase
+      .from("products")
+      .select("id,name,description,price_cents,currency,image_url")
+      .eq("active", true)
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    if (error || !data) return [];
+    return data.map(localToShopifyProduct);
+  } catch {
+    return [];
+  }
+}
+
 export async function fetchProducts(first: number = 50, query?: string): Promise<ShopifyProduct[]> {
-  const data = await storefrontApiRequest(PRODUCTS_QUERY, { first, query });
-  if (!data) return [];
-  return data.data.products.edges;
+  try {
+    const data = await storefrontApiRequest(PRODUCTS_QUERY, { first, query });
+    const shopifyProducts: ShopifyProduct[] = data?.data?.products?.edges ?? [];
+    if (shopifyProducts.length > 0) return shopifyProducts;
+  } catch (e) {
+    console.warn("Shopify fetch failed, falling back to local products:", e);
+  }
+  return await fetchLocalProducts(first);
 }
 
 export async function fetchProductByHandle(handle: string) {
+  if (handle.startsWith("local-")) {
+    const id = handle.replace(/^local-/, "");
+    const { data } = await supabase
+      .from("products")
+      .select("id,name,description,price_cents,currency,image_url")
+      .eq("id", id)
+      .eq("active", true)
+      .maybeSingle();
+    if (!data) return null;
+    return localToShopifyProduct(data).node;
+  }
   const data = await storefrontApiRequest(PRODUCT_BY_HANDLE_QUERY, { handle });
   if (!data) return null;
   return data.data.productByHandle;
