@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { ShopifyProduct, createStorefrontCheckout, fetchVariantPrices } from '@/lib/shopify';
+import { ShopifyProduct, fetchVariantPrices } from '@/lib/shopify';
+import { supabase } from '@/integrations/supabase/client';
 const memoryStore: Record<string, string> = {};
 const safeStorage = (): Storage => {
   return {
