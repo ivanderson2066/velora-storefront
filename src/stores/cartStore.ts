@@ -107,14 +107,15 @@ export const useCartStore = create<CartStore>()(
         }
       },
 
-      // Sync prices with Shopify for all items currently in cart
+      // Sync prices (skip local products — they're already priced from our DB)
       syncPrices: async () => {
         const { items, setLoading } = get();
-        if (items.length === 0) return;
+        const remoteItems = items.filter(i => !i.variantId.startsWith('local-'));
+        if (remoteItems.length === 0) return;
 
         setLoading(true);
         try {
-          const ids = items.map(i => i.variantId);
+          const ids = remoteItems.map(i => i.variantId);
           const prices = await fetchVariantPrices(ids);
 
           set({
