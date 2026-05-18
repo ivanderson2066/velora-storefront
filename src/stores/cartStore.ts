@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { ShopifyProduct, createStorefrontCheckout, fetchVariantPrices } from '@/lib/shopify';
+import { ShopifyProduct, fetchVariantPrices } from '@/lib/shopify';
+import { supabase } from '@/integrations/supabase/client';
 const memoryStore: Record<string, string> = {};
 const safeStorage = (): Storage => {
   return {
@@ -106,14 +107,15 @@ export const useCartStore = create<CartStore>()(
         }
       },
 
-      // Sync prices with Shopify for all items currently in cart
+      // Sync prices (skip local products — they're already priced from our DB)
       syncPrices: async () => {
         const { items, setLoading } = get();
-        if (items.length === 0) return;
+        const remoteItems = items.filter(i => !i.variantId.startsWith('local-'));
+        if (remoteItems.length === 0) return;
 
         setLoading(true);
         try {
-          const ids = items.map(i => i.variantId);
+          const ids = remoteItems.map(i => i.variantId);
           const prices = await fetchVariantPrices(ids);
 
           set({
@@ -188,10 +190,22 @@ export const useCartStore = create<CartStore>()(
 
         setLoading(true);
         try {
-          const checkoutUrl = await createStorefrontCheckout(
-            items.map(item => ({ variantId: item.variantId, quantity: item.quantity }))
-          );
-          return checkoutUrl;
+          const payloadItems = items.map(item => ({
+            productId: item.product.node.id, // edge function strips "local-" prefix
+            quantity: item.quantity,
+          }));
+
+          const locale = typeof navigator !== 'undefined' && navigator.language?.startsWith('pt') ? 'pt' : 'en';
+
+          const { data, error } = await supabase.functions.invoke('create-checkout', {
+            body: { items: payloadItems, locale },
+          });
+
+          if (error) {
+            console.error('Checkout edge function error:', error);
+            return null;
+          }
+          return (data as { url?: string } | null)?.url ?? null;
         } catch (error) {
           console.error('Failed to create checkout:', error);
           return null;
