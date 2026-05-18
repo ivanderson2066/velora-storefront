@@ -190,10 +190,22 @@ export const useCartStore = create<CartStore>()(
 
         setLoading(true);
         try {
-          const checkoutUrl = await createStorefrontCheckout(
-            items.map(item => ({ variantId: item.variantId, quantity: item.quantity }))
-          );
-          return checkoutUrl;
+          const payloadItems = items.map(item => ({
+            productId: item.product.node.id, // edge function strips "local-" prefix
+            quantity: item.quantity,
+          }));
+
+          const locale = typeof navigator !== 'undefined' && navigator.language?.startsWith('pt') ? 'pt' : 'en';
+
+          const { data, error } = await supabase.functions.invoke('create-checkout', {
+            body: { items: payloadItems, locale },
+          });
+
+          if (error) {
+            console.error('Checkout edge function error:', error);
+            return null;
+          }
+          return (data as { url?: string } | null)?.url ?? null;
         } catch (error) {
           console.error('Failed to create checkout:', error);
           return null;
