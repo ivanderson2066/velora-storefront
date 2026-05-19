@@ -100,6 +100,28 @@ export default function AdminPage() {
     if (isAdmin) void loadProducts();
   }, [isAdmin]);
 
+  // orders
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+
+  const loadOrders = async () => {
+    setOrdersLoading(true);
+    const { data, error } = await supabase
+      .from("orders")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(100);
+    if (!error && data) setOrders(data as unknown as Order[]);
+    setOrdersLoading(false);
+  };
+
+  useEffect(() => {
+    if (isAdmin) {
+      void loadProducts();
+      void loadOrders();
+    }
+  }, [isAdmin]);
+
   const handleSignIn = async (e: FormEvent) => {
     e.preventDefault();
     const { error } = await supabase.auth.signInWithPassword({ email, password });
