@@ -96,9 +96,6 @@ export default function AdminPage() {
     if (!error && data) setProducts(data as Product[]);
   };
 
-  useEffect(() => {
-    if (isAdmin) void loadProducts();
-  }, [isAdmin]);
 
   // orders
   const [orders, setOrders] = useState<Order[]>([]);
