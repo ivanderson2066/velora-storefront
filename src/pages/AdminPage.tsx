@@ -8,8 +8,22 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { useI18n } from "@/lib/i18n";
 import { toast } from "sonner";
+
+interface Order {
+  id: string;
+  stripe_session_id: string;
+  stripe_payment_intent: string | null;
+  customer_email: string | null;
+  amount_total: number;
+  currency: string;
+  status: string;
+  items: Array<{ product_id: string; quantity: number }> | null;
+  created_at: string;
+}
 
 interface Product {
   id: string;
