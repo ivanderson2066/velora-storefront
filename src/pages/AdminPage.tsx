@@ -102,6 +102,7 @@ export default function AdminPage() {
   // orders
   const [orders, setOrders] = useState<Order[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   const loadOrders = async () => {
     setOrdersLoading(true);
@@ -112,6 +113,15 @@ export default function AdminPage() {
       .limit(100);
     if (!error && data) setOrders(data as unknown as Order[]);
     setOrdersLoading(false);
+  };
+
+  const copyToClipboard = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(`${label} copied`);
+    } catch {
+      toast.error("Failed to copy");
+    }
   };
 
   useEffect(() => {
