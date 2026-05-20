@@ -372,7 +372,11 @@ export default function AdminPage() {
                 const statusVariant: "default" | "secondary" | "destructive" | "outline" =
                   o.status === "paid" ? "default" : o.status === "pending" ? "secondary" : "destructive";
                 return (
-                  <Card key={o.id} className="p-5">
+                  <Card
+                    key={o.id}
+                    onClick={() => setSelectedOrder(o)}
+                    className="p-5 cursor-pointer transition-all hover:shadow-md hover:border-primary/30"
+                  >
                     <div className="flex items-start justify-between gap-4 mb-3">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 mb-1">
@@ -414,6 +418,143 @@ export default function AdminPage() {
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* Order details dialog */}
+        <Dialog open={!!selectedOrder} onOpenChange={(open) => !open && setSelectedOrder(null)}>
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+            {selectedOrder && (() => {
+              const o = selectedOrder;
+              const amount = (o.amount_total / 100).toLocaleString(undefined, {
+                style: "currency",
+                currency: (o.currency || "usd").toUpperCase(),
+              });
+              const itemCount = o.items?.reduce((s, i) => s + (i.quantity || 0), 0) ?? 0;
+              const statusVariant: "default" | "secondary" | "destructive" | "outline" =
+                o.status === "paid" ? "default" : o.status === "pending" ? "secondary" : "destructive";
+              return (
+                <>
+                  <DialogHeader>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Receipt className="h-5 w-5 text-muted-foreground" />
+                      <Badge variant={statusVariant} className="capitalize">{o.status}</Badge>
+                    </div>
+                    <DialogTitle className="text-2xl font-light">Order details</DialogTitle>
+                    <DialogDescription>
+                      Placed on {new Date(o.created_at).toLocaleString()}
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="space-y-6 mt-4">
+                    {/* Summary */}
+                    <div className="grid grid-cols-2 gap-4 p-4 rounded-lg bg-muted/40 border">
+                      <div>
+                        <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Total</p>
+                        <p className="text-2xl font-light">{amount}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Items</p>
+                        <p className="text-2xl font-light">{itemCount}</p>
+                      </div>
+                    </div>
+
+                    {/* Customer */}
+                    <div>
+                      <h3 className="text-sm font-medium mb-2">Customer</h3>
+                      <Card className="p-4 flex items-center justify-between gap-3">
+                        <span className="text-sm break-all">{o.customer_email ?? "—"}</span>
+                        {o.customer_email && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => copyToClipboard(o.customer_email!, "Email")}
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </Card>
+                    </div>
+
+                    {/* Items */}
+                    <div>
+                      <h3 className="text-sm font-medium mb-2">Items</h3>
+                      <Card className="divide-y">
+                        {(o.items ?? []).map((it, idx) => {
+                          const product = products.find((p) => p.id === it.product_id);
+                          const lineTotal = product
+                            ? (product.price_cents * it.quantity / 100).toLocaleString(undefined, {
+                                style: "currency",
+                                currency: (product.currency || "usd").toUpperCase(),
+                              })
+                            : null;
+                          return (
+                            <div key={idx} className="flex items-center gap-3 p-4">
+                              {product?.image_url && (
+                                <img
+                                  src={product.image_url}
+                                  alt=""
+                                  className="w-14 h-14 rounded object-cover border"
+                                />
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium truncate">{product?.name ?? "Unknown product"}</p>
+                                <p className="text-xs font-mono text-muted-foreground truncate">{it.product_id}</p>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <p className="text-sm">× {it.quantity}</p>
+                                {lineTotal && <p className="text-xs text-muted-foreground">{lineTotal}</p>}
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {(!o.items || o.items.length === 0) && (
+                          <div className="p-4 text-sm text-muted-foreground text-center">No items recorded.</div>
+                        )}
+                      </Card>
+                    </div>
+
+                    {/* Stripe references */}
+                    <div>
+                      <h3 className="text-sm font-medium mb-2">Stripe references</h3>
+                      <div className="space-y-2">
+                        <Card className="p-3 flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-xs uppercase tracking-wider text-muted-foreground mb-0.5">Session</p>
+                            <p className="text-xs font-mono break-all">{o.stripe_session_id}</p>
+                          </div>
+                          <div className="flex gap-1 shrink-0">
+                            <Button size="sm" variant="ghost" onClick={() => copyToClipboard(o.stripe_session_id, "Session ID")}>
+                              <Copy className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button size="sm" variant="ghost" asChild>
+                              <a
+                                href={`https://dashboard.stripe.com/payments/${o.stripe_payment_intent ?? ""}`}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                <ExternalLink className="h-3.5 w-3.5" />
+                              </a>
+                            </Button>
+                          </div>
+                        </Card>
+                        {o.stripe_payment_intent && (
+                          <Card className="p-3 flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-xs uppercase tracking-wider text-muted-foreground mb-0.5">Payment intent</p>
+                              <p className="text-xs font-mono break-all">{o.stripe_payment_intent}</p>
+                            </div>
+                            <Button size="sm" variant="ghost" onClick={() => copyToClipboard(o.stripe_payment_intent!, "Payment intent")}>
+                              <Copy className="h-3.5 w-3.5" />
+                            </Button>
+                          </Card>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+          </DialogContent>
+        </Dialog>
 
       </main>
     </>
