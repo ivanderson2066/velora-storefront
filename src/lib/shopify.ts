@@ -2,9 +2,9 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 const SHOPIFY_API_VERSION = '2025-07';
-const SHOPIFY_STORE_PERMANENT_DOMAIN = 'fwd9jn-1p.myshopify.com';
+const SHOPIFY_STORE_PERMANENT_DOMAIN = import.meta.env.VITE_SHOPIFY_STORE_DOMAIN as string | undefined;
 const SHOPIFY_STOREFRONT_URL = `https://${SHOPIFY_STORE_PERMANENT_DOMAIN}/api/${SHOPIFY_API_VERSION}/graphql.json`;
-const SHOPIFY_STOREFRONT_TOKEN = 'b0159fe69afa12edfae41b61b04553f5';
+const SHOPIFY_STOREFRONT_TOKEN = import.meta.env.VITE_SHOPIFY_STOREFRONT_TOKEN as string | undefined;
 const SHOPIFY_DEFAULT_COUNTRY = (import.meta.env.VITE_SHOPIFY_DEFAULT_COUNTRY as string | undefined) || 'US';
 
 export interface ProductReview {
@@ -68,6 +68,10 @@ export interface ShopifyProduct {
 }
 
 export async function storefrontApiRequest(query: string, variables: Record<string, unknown> = {}) {
+  if (!SHOPIFY_STORE_PERMANENT_DOMAIN || !SHOPIFY_STOREFRONT_TOKEN) {
+    return null;
+  }
+
   const response = await fetch(SHOPIFY_STOREFRONT_URL, {
     method: 'POST',
     headers: {
@@ -293,6 +297,9 @@ async function fetchLocalProducts(limit: number): Promise<ShopifyProduct[]> {
 }
 
 export async function fetchProducts(first: number = 50, query?: string): Promise<ShopifyProduct[]> {
+  const localProducts = await fetchLocalProducts(first);
+  if (localProducts.length > 0) return localProducts;
+
   try {
     const data = await storefrontApiRequest(PRODUCTS_QUERY, { first, query });
     const shopifyProducts: ShopifyProduct[] = data?.data?.products?.edges ?? [];
@@ -300,7 +307,7 @@ export async function fetchProducts(first: number = 50, query?: string): Promise
   } catch (e) {
     console.warn("Shopify fetch failed, falling back to local products:", e);
   }
-  return await fetchLocalProducts(first);
+  return [];
 }
 
 export async function fetchProductByHandle(handle: string) {
@@ -424,6 +431,7 @@ export async function fetchShopPolicies(): Promise<ShopPolicies | null> {
 // Fetch prices for given variant IDs (GraphQL node lookup)
 export async function fetchVariantPrices(variantIds: string[]): Promise<Record<string, { amount: string; currencyCode: string }>> {
   if (variantIds.length === 0) return {};
+  if (variantIds.every((id) => id.startsWith('local-'))) return {};
 
   const VARIANT_QUERY = `
     query GetVariants($ids: [ID!]!) {

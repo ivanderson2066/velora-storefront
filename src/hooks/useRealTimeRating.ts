@@ -13,6 +13,7 @@ export const useRealTimeRating = (
   initialRating: number = 0, 
   initialCount: number = 0
 ): RatingStats => {
+  const reviewsClient = supabase as any;
   const [stats, setStats] = useState<RatingStats>({
     rating: Number(initialRating) || 0,
     count: Number(initialCount) || 0,
@@ -20,7 +21,7 @@ export const useRealTimeRating = (
   });
 
   useEffect(() => {
-    if (!supabase) {
+    if (!reviewsClient) {
       setStats(prev => ({ ...prev, isLoading: false }));
       return;
     }
@@ -35,7 +36,7 @@ export const useRealTimeRating = (
 
         // ESTRATÉGIA UNIFICADA: Busca tudo que pode ser relevante
         // 1. Busca por ID
-        const { data: idData } = await supabase
+        const { data: idData } = await reviewsClient
           .from('reviews')
           .select('id, rating') // Selecionamos ID para dedup
           .eq('product_id', cleanId);
@@ -44,7 +45,7 @@ export const useRealTimeRating = (
 
         // 2. Busca por Handle (se existir)
         if (handle) {
-           const { data: handleData } = await supabase
+           const { data: handleData } = await reviewsClient
              .from('reviews')
              .select('id, rating')
              .eq('product_handle', handle);
@@ -54,7 +55,7 @@ export const useRealTimeRating = (
 
         // 3. Busca Handle na coluna ID (fallback comum)
         if (handle) {
-            const { data: mixedData } = await supabase
+            const { data: mixedData } = await reviewsClient
               .from('reviews')
               .select('id, rating')
               .eq('product_id', handle);
