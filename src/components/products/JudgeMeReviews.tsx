@@ -25,6 +25,7 @@ interface JudgeMeReviewsProps {
 }
 
 export const JudgeMeReviews = ({ productTitle = "Reviews", productHandle }: JudgeMeReviewsProps) => {
+  const reviewsClient = supabase as any;
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [isWriting, setIsWriting] = useState(false); // Controla a visibilidade do formulário
@@ -67,8 +68,8 @@ export const JudgeMeReviews = ({ productTitle = "Reviews", productHandle }: Judg
         }
 
         // 2. Importação Supabase
-        if (supabase) {
-          const { data, error } = await supabase
+        if (reviewsClient) {
+          const { data, error } = await reviewsClient
             .from('reviews')
             .select('*')
             .eq('product_handle', productHandle)
@@ -119,7 +120,7 @@ export const JudgeMeReviews = ({ productTitle = "Reviews", productHandle }: Judg
     setSubmitting(true);
     
     try {
-      if (!supabase) throw new Error("Supabase not configured");
+      if (!reviewsClient) throw new Error("Supabase not configured");
 
       // Upload de Imagens
       const bucket = "reviews";
@@ -128,12 +129,12 @@ export const JudgeMeReviews = ({ productTitle = "Reviews", productHandle }: Judg
       if (files.length > 0) {
         for (const file of files) {
           const path = `${productHandle}/${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name}`;
-          const { error: uploadError } = await supabase.storage
+            const { error: uploadError } = await reviewsClient.storage
             .from(bucket)
             .upload(path, file, { contentType: file.type });
           
           if (!uploadError) {
-            const { data: publicData } = supabase.storage.from(bucket).getPublicUrl(path);
+              const { data: publicData } = reviewsClient.storage.from(bucket).getPublicUrl(path);
             if (publicData?.publicUrl) uploadedUrls.push(publicData.publicUrl);
           }
         }
@@ -143,7 +144,7 @@ export const JudgeMeReviews = ({ productTitle = "Reviews", productHandle }: Judg
       const finalImages = [...uploadedUrls, ...manualUrls];
       const picturesString = finalImages.join(",");
 
-      const { error } = await supabase.from("reviews").insert({
+      const { error } = await reviewsClient.from("reviews").insert({
         product_handle: productHandle,
         name: author || "Verified Customer",
         title,
