@@ -6,7 +6,17 @@ import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useI18n } from "@/lib/i18n";
 import { useCartStore } from "@/stores/cartStore";
-import { CheckCircle2, Package, Mail, ArrowRight, Sparkles } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { CheckCircle2, Package, Mail, ArrowRight, Sparkles, Loader2 } from "lucide-react";
+
+type OrderStatus = {
+  status: string;
+  amount_total: number;
+  currency: string;
+  customer_email: string | null;
+  items: Array<{ product_id: string; quantity: number }> | null;
+  created_at: string;
+} | null;
 
 export default function CheckoutSuccessPage() {
   const { t } = useI18n();
@@ -14,12 +24,45 @@ export default function CheckoutSuccessPage() {
   const sessionId = params.get("session_id");
   const clearCart = useCartStore((s) => s.clearCart);
   const [mounted, setMounted] = useState(false);
+  const [order, setOrder] = useState<OrderStatus>(null);
+  const [polling, setPolling] = useState(true);
 
   useEffect(() => {
     clearCart();
     const id = requestAnimationFrame(() => setMounted(true));
     return () => cancelAnimationFrame(id);
   }, [clearCart]);
+
+  useEffect(() => {
+    if (!sessionId) { setPolling(false); return; }
+    let cancelled = false;
+    let attempts = 0;
+    const poll = async () => {
+      attempts += 1;
+      const { data, error } = await supabase.functions.invoke("get-order-status", {
+        body: { session_id: sessionId },
+      });
+      if (cancelled) return;
+      const found = (data as { order?: OrderStatus } | null)?.order ?? null;
+      if (!error && found) {
+        setOrder(found);
+        if (found.status === "paid" || attempts >= 20) { setPolling(false); return; }
+      }
+      if (attempts >= 20) { setPolling(false); return; }
+      setTimeout(poll, 2000);
+    };
+    void poll();
+    return () => { cancelled = true; };
+  }, [sessionId]);
+
+  const paid = order?.status === "paid";
+  const amountLabel = order
+    ? (order.amount_total / 100).toLocaleString(undefined, {
+        style: "currency",
+        currency: (order.currency || "usd").toUpperCase(),
+      })
+    : null;
+
 
   return (
     <>
@@ -64,15 +107,36 @@ export default function CheckoutSuccessPage() {
                       Order reference
                     </p>
                     <p className="font-mono text-sm break-all">{sessionId.slice(0, 24)}…</p>
+                    {amountLabel && (
+                      <p className="text-sm mt-2">
+                        <span className="text-muted-foreground">Total: </span>
+                        <span className="font-medium">{amountLabel}</span>
+                      </p>
+                    )}
+                    {order?.customer_email && (
+                      <p className="text-xs text-muted-foreground mt-1">{order.customer_email}</p>
+                    )}
                   </div>
-                  <span className="shrink-0 inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                    <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                    Paid
-                  </span>
+                  {paid ? (
+                    <span className="shrink-0 inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                      <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                      Payment confirmed
+                    </span>
+                  ) : polling ? (
+                    <span className="shrink-0 inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Confirming…
+                    </span>
+                  ) : (
+                    <span className="shrink-0 inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
+                      Processing
+                    </span>
+                  )}
                 </div>
                 <Separator className="mb-6" />
               </>
             )}
+
 
             <div className="space-y-5">
               <div className="flex gap-4">
