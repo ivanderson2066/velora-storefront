@@ -107,15 +107,36 @@ export default function CheckoutSuccessPage() {
                       Order reference
                     </p>
                     <p className="font-mono text-sm break-all">{sessionId.slice(0, 24)}…</p>
+                    {amountLabel && (
+                      <p className="text-sm mt-2">
+                        <span className="text-muted-foreground">Total: </span>
+                        <span className="font-medium">{amountLabel}</span>
+                      </p>
+                    )}
+                    {order?.customer_email && (
+                      <p className="text-xs text-muted-foreground mt-1">{order.customer_email}</p>
+                    )}
                   </div>
-                  <span className="shrink-0 inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                    <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                    Paid
-                  </span>
+                  {paid ? (
+                    <span className="shrink-0 inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                      <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                      Payment confirmed
+                    </span>
+                  ) : polling ? (
+                    <span className="shrink-0 inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Confirming…
+                    </span>
+                  ) : (
+                    <span className="shrink-0 inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
+                      Processing
+                    </span>
+                  )}
                 </div>
                 <Separator className="mb-6" />
               </>
             )}
+
 
             <div className="space-y-5">
               <div className="flex gap-4">
