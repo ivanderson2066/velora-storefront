@@ -6,7 +6,17 @@ import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useI18n } from "@/lib/i18n";
 import { useCartStore } from "@/stores/cartStore";
-import { CheckCircle2, Package, Mail, ArrowRight, Sparkles } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { CheckCircle2, Package, Mail, ArrowRight, Sparkles, Loader2 } from "lucide-react";
+
+type OrderStatus = {
+  status: string;
+  amount_total: number;
+  currency: string;
+  customer_email: string | null;
+  items: Array<{ product_id: string; quantity: number }> | null;
+  created_at: string;
+} | null;
 
 export default function CheckoutSuccessPage() {
   const { t } = useI18n();
@@ -14,12 +24,45 @@ export default function CheckoutSuccessPage() {
   const sessionId = params.get("session_id");
   const clearCart = useCartStore((s) => s.clearCart);
   const [mounted, setMounted] = useState(false);
+  const [order, setOrder] = useState<OrderStatus>(null);
+  const [polling, setPolling] = useState(true);
 
   useEffect(() => {
     clearCart();
     const id = requestAnimationFrame(() => setMounted(true));
     return () => cancelAnimationFrame(id);
   }, [clearCart]);
+
+  useEffect(() => {
+    if (!sessionId) { setPolling(false); return; }
+    let cancelled = false;
+    let attempts = 0;
+    const poll = async () => {
+      attempts += 1;
+      const { data, error } = await supabase.functions.invoke("get-order-status", {
+        body: { session_id: sessionId },
+      });
+      if (cancelled) return;
+      const found = (data as { order?: OrderStatus } | null)?.order ?? null;
+      if (!error && found) {
+        setOrder(found);
+        if (found.status === "paid" || attempts >= 20) { setPolling(false); return; }
+      }
+      if (attempts >= 20) { setPolling(false); return; }
+      setTimeout(poll, 2000);
+    };
+    void poll();
+    return () => { cancelled = true; };
+  }, [sessionId]);
+
+  const paid = order?.status === "paid";
+  const amountLabel = order
+    ? (order.amount_total / 100).toLocaleString(undefined, {
+        style: "currency",
+        currency: (order.currency || "usd").toUpperCase(),
+      })
+    : null;
+
 
   return (
     <>
