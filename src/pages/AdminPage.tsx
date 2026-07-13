@@ -276,11 +276,27 @@ export default function AdminPage() {
           <Button variant="outline" size="sm" onClick={handleSignOut}>{t("admin.signout")}</Button>
         </div>
 
+        {(() => {
+          const paidOrders = orders.filter((o) => o.status === "paid");
+          const revenueCents = paidOrders.reduce((s, o) => s + (o.amount_total || 0), 0);
+          const currency = (paidOrders[0]?.currency || "usd").toUpperCase();
+          const revenue = (revenueCents / 100).toLocaleString(undefined, { style: "currency", currency });
+          return (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+              <Card className="p-4"><p className="text-xs text-muted-foreground uppercase tracking-wider">Revenue (paid)</p><p className="text-xl font-medium mt-1">{revenue}</p></Card>
+              <Card className="p-4"><p className="text-xs text-muted-foreground uppercase tracking-wider">Paid orders</p><p className="text-xl font-medium mt-1">{paidOrders.length}</p></Card>
+              <Card className="p-4"><p className="text-xs text-muted-foreground uppercase tracking-wider">Total orders</p><p className="text-xl font-medium mt-1">{orders.length}</p></Card>
+              <Card className="p-4"><p className="text-xs text-muted-foreground uppercase tracking-wider">Active products</p><p className="text-xl font-medium mt-1">{products.filter(p=>p.active).length}/{products.length}</p></Card>
+            </div>
+          );
+        })()}
+
         <Tabs defaultValue="products" className="w-full">
           <TabsList className="mb-6">
             <TabsTrigger value="products">Products</TabsTrigger>
             <TabsTrigger value="orders">Orders {orders.length > 0 && `(${orders.length})`}</TabsTrigger>
           </TabsList>
+
 
           <TabsContent value="products" className="space-y-6">
             <Card className="p-6">
