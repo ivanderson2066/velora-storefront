@@ -52,10 +52,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
+    const backendUrl = Deno.env.get("SUPABASE_URL");
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!backendUrl || !serviceKey) {
+      return new Response(JSON.stringify({ error: "Checkout service unavailable" }), {
+        status: 503,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const supabase = createClient(backendUrl, serviceKey);
 
     const ids = requested.map((r) => r.id);
     const { data: products, error } = await supabase
@@ -64,7 +69,8 @@ Deno.serve(async (req) => {
       .in("id", ids)
       .eq("active", true);
 
-    if (error || !products || products.length === 0) {
+    const uniqueIds = [...new Set(ids)];
+    if (error || !products || products.length !== uniqueIds.length) {
       return new Response(JSON.stringify({ error: "Products not found" }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -81,6 +87,14 @@ Deno.serve(async (req) => {
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2024-11-20.acacia" });
     const origin = req.headers.get("origin") ?? "https://example.com";
+
+    const currencies = new Set(products.map((product) => product.currency.toLowerCase()));
+    if (currencies.size !== 1) {
+      return new Response(JSON.stringify({ error: "All checkout items must use the same currency" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const productMap = new Map(products.map((p) => [p.id, p]));
 

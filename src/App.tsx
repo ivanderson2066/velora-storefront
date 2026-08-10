@@ -123,11 +123,11 @@ const App = () => {
   };
 
   return (
-    <HelmetProvider>
-      <QueryClientProvider client={queryClient}>
-        <I18nProvider>
-        <TooltipProvider>
-          <ErrorBoundary>
+    <ErrorBoundary>
+      <HelmetProvider>
+        <QueryClientProvider client={queryClient}>
+          <I18nProvider>
+          <TooltipProvider>
             <Toaster />
             <Sonner />
             <BrowserRouter>
@@ -172,11 +172,11 @@ const App = () => {
                 </div>
               )}
             </BrowserRouter>
-          </ErrorBoundary>
-        </TooltipProvider>
-        </I18nProvider>
-      </QueryClientProvider>
-    </HelmetProvider>
+          </TooltipProvider>
+          </I18nProvider>
+        </QueryClientProvider>
+      </HelmetProvider>
+    </ErrorBoundary>
   );
 };
 

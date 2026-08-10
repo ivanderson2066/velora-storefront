@@ -49,10 +49,15 @@ Deno.serve(async (req) => {
     );
   }
 
-  const admin = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  );
+  const backendUrl = Deno.env.get("SUPABASE_URL");
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!backendUrl || !serviceKey) {
+    return new Response(JSON.stringify({ error: "Order service unavailable" }), {
+      status: 503,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  const admin = createClient(backendUrl, serviceKey);
 
   try {
     switch (event.type) {
@@ -93,6 +98,29 @@ Deno.serve(async (req) => {
             },
             { onConflict: "stripe_session_id" },
           );
+        break;
+      }
+      case "charge.refunded": {
+        const charge = event.data.object as Stripe.Charge;
+        const paymentIntent = typeof charge.payment_intent === "string"
+          ? charge.payment_intent
+          : charge.payment_intent?.id;
+        if (paymentIntent) {
+          const { error } = await admin
+            .from("orders")
+            .update({ status: charge.refunded ? "refunded" : "partially_refunded" })
+            .eq("stripe_payment_intent", paymentIntent);
+          if (error) throw error;
+        }
+        break;
+      }
+      case "payment_intent.payment_failed": {
+        const paymentIntent = event.data.object as Stripe.PaymentIntent;
+        const { error } = await admin
+          .from("orders")
+          .update({ status: "failed" })
+          .eq("stripe_payment_intent", paymentIntent.id);
+        if (error) throw error;
         break;
       }
       default:

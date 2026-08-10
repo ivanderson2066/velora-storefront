@@ -142,22 +142,13 @@ export default function AdminPage() {
     }
   };
 
-  const handleSignUp = async (e: FormEvent) => {
-    e.preventDefault();
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { emailRedirectTo: window.location.origin + "/admin" },
-    });
-    if (error) toast.error(error.message);
-    else toast.success("Account created. If this is the first admin, ask to be granted admin role.");
-  };
-
   const handleSignOut = async () => {
     await supabase.auth.signOut();
   };
 
   const uploadImage = async (file: File): Promise<string> => {
+    if (!file.type.startsWith("image/")) throw new Error("Select a valid image file");
+    if (file.size > 5 * 1024 * 1024) throw new Error("Image must be 5 MB or smaller");
     const ext = file.name.split(".").pop() || "jpg";
     const path = `${crypto.randomUUID()}.${ext}`;
     const { error } = await supabase.storage
@@ -176,7 +167,11 @@ export default function AdminPage() {
       if (imageFile) {
         image_url = await uploadImage(imageFile);
       }
-      const priceCents = Math.round(parseFloat(form.price_usd || "0") * 100);
+      const parsedPrice = Number(form.price_usd);
+      if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
+        throw new Error("Price must be greater than zero");
+      }
+      const priceCents = Math.round(parsedPrice * 100);
       const payload = {
         name: form.name,
         description: form.description || null,
@@ -245,12 +240,9 @@ export default function AdminPage() {
                 <Label>{t("admin.password")}</Label>
                 <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
               </div>
-              <div className="flex gap-2">
-                <Button type="submit" className="flex-1" onClick={handleSignIn}>
+              <div>
+                <Button type="submit" className="w-full" onClick={handleSignIn}>
                   {t("admin.signin")}
-                </Button>
-                <Button type="button" variant="outline" className="flex-1" onClick={handleSignUp}>
-                  {t("admin.signup")}
                 </Button>
               </div>
             </form>
@@ -320,7 +312,7 @@ export default function AdminPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label>{t("admin.price")}</Label>
-                    <Input type="number" step="0.01" min="0" value={form.price_usd} onChange={(e) => setForm({ ...form, price_usd: e.target.value })} required />
+                    <Input type="number" step="0.01" min="0.01" value={form.price_usd} onChange={(e) => setForm({ ...form, price_usd: e.target.value })} required />
                   </div>
                 </div>
                 <div>
