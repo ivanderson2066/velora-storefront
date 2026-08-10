@@ -204,13 +204,12 @@ export function trackCustomEvent(eventName: string, params?: Record<string, unkn
 }
 
 /**
- * Extrai o ID numérico do Shopify de um GID
+ * Normalizes product IDs before sending catalog events.
  */
-export function extractShopifyId(gid: string): string {
+export function normalizeProductId(id: string): string {
   try {
-    const match = gid.match(/\/(\d+)$/);
-    return match ? match[1] : gid;
+    return id.replace(/^local-(variant-)?/, '');
   } catch {
-    return gid;
+    return id;
   }
 }

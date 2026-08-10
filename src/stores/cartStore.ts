@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { ShopifyProduct, fetchVariantPrices } from '@/lib/shopify';
+import { StoreProduct, fetchVariantPrices } from '@/lib/products';
 import { supabase } from '@/integrations/supabase/client';
 const memoryStore: Record<string, string> = {};
 const safeStorage = (): Storage => {
@@ -55,7 +55,7 @@ const safeStorage = (): Storage => {
 };
 
 export interface CartItem {
-  product: ShopifyProduct;
+  product: StoreProduct;
   variantId: string;
   variantTitle: string;
   price: {
@@ -110,7 +110,7 @@ export const useCartStore = create<CartStore>()(
       // Sync prices (skip local products — they're already priced from our DB)
       syncPrices: async () => {
         const { items, setLoading } = get();
-        const remoteItems = items.filter(i => !i.variantId.startsWith('local-'));
+        const remoteItems = items;
         if (remoteItems.length === 0) return;
 
         setLoading(true);
@@ -191,7 +191,7 @@ export const useCartStore = create<CartStore>()(
         setLoading(true);
         try {
           const payloadItems = items.map(item => ({
-            productId: item.product.node.id, // edge function strips "local-" prefix
+            productId: item.product.node.id,
             quantity: item.quantity,
           }));
 
@@ -203,12 +203,14 @@ export const useCartStore = create<CartStore>()(
 
           if (error) {
             console.error('Checkout edge function error:', error);
-            return null;
+            throw new Error(error.message || 'Unable to start secure checkout');
           }
-          return (data as { url?: string } | null)?.url ?? null;
+          const url = (data as { url?: string; error?: string } | null)?.url;
+          if (!url) throw new Error((data as { error?: string } | null)?.error || 'Checkout URL was not returned');
+          return url;
         } catch (error) {
           console.error('Failed to create checkout:', error);
-          return null;
+          throw error;
         } finally {
           setLoading(false);
         }

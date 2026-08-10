@@ -5,10 +5,11 @@ import AnnouncementBar from "@/components/layout/AnnouncementBar";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { ProductCard } from "@/components/products/ProductCard";
-import { fetchProducts, ShopifyProduct } from "@/lib/shopify";
+import { fetchProducts, StoreProduct } from "@/lib/products";
 
 const ShopPage = () => {
-  const [products, setProducts] = useState<ShopifyProduct[]>([]);
+  const [products, setProducts] = useState<StoreProduct[]>([]);
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -18,6 +19,7 @@ const ShopPage = () => {
         setProducts(data);
       } catch (error) {
         console.error("Failed to load products:", error);
+        setError(error instanceof Error ? error.message : "Unable to load products");
       } finally {
         setLoading(false);
       }
@@ -57,6 +59,11 @@ const ShopPage = () => {
             {loading ? (
               <div className="flex items-center justify-center py-20">
                 <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : error ? (
+              <div className="text-center py-20">
+                <p className="text-destructive mb-2">We couldn't load the catalog.</p>
+                <p className="text-sm text-muted-foreground">{error}</p>
               </div>
             ) : products.length === 0 ? (
               <div className="text-center py-20">

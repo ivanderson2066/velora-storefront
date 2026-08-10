@@ -6,7 +6,7 @@ import AnnouncementBar from "@/components/layout/AnnouncementBar";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
-import { fetchProducts, fetchProductByHandle, ShopifyProduct, parseReviewData, fetchVariantPrices } from "@/lib/shopify";
+import { fetchProducts, fetchProductByHandle, StoreProduct, parseReviewData, fetchVariantPrices } from "@/lib/products";
 import { useCartStore } from "@/stores/cartStore";
 import { ProductCard } from "@/components/products/ProductCard";
 import { RealTimeProductRating } from "@/components/products/RealTimeProductRating";
@@ -14,7 +14,7 @@ import { JudgeMeReviews } from "@/components/products/JudgeMeReviews";
 import { LuxuryDescription } from "@/components/products/LuxuryDescription";
 import { ProductImageCarousel } from "@/components/products/ProductImageCarousel";
 import { toast } from "sonner";
-import { trackViewContent, trackAddToCart, trackInitiateCheckout, extractShopifyId } from "@/lib/fbPixel";
+import { trackViewContent, trackAddToCart, trackInitiateCheckout, normalizeProductId } from "@/lib/fbPixel";
 
 interface ProductNode {
   id: string;
@@ -72,7 +72,7 @@ interface ProductNode {
 const ProductDetailPage = () => {
   const { handle } = useParams<{ handle: string }>();
   const [product, setProduct] = useState<ProductNode | null>(null);
-  const [relatedProducts, setRelatedProducts] = useState<ShopifyProduct[]>([]);
+  const [relatedProducts, setRelatedProducts] = useState<StoreProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedVariant, setSelectedVariant] = useState<ProductNode["variants"]["edges"][0]["node"] | null>(null);
   const [quantity, setQuantity] = useState(1);
@@ -104,7 +104,7 @@ const ProductDetailPage = () => {
           const price = parseFloat(productData.priceRange.minVariantPrice.amount);
           trackViewContent({
             content_name: productData.title,
-            content_ids: [extractShopifyId(productData.id)],
+            content_ids: [normalizeProductId(productData.id)],
             content_type: 'product',
             value: price,
             currency: productData.priceRange.minVariantPrice.currencyCode,
@@ -179,7 +179,7 @@ const ProductDetailPage = () => {
     const currency = latestCurrency ?? selectedVariant.price.currencyCode;
     trackAddToCart({
       content_name: product.title,
-      content_ids: [extractShopifyId(product.id)],
+      content_ids: [normalizeProductId(product.id)],
       content_type: 'product',
       value: price * quantity,
       currency,

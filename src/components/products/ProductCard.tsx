@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ShopifyProduct, parseReviewData } from "@/lib/shopify";
+import { StoreProduct, parseReviewData } from "@/lib/products";
 import { useCartStore } from "@/stores/cartStore";
 import { Button } from "@/components/ui/button";
 import { ShoppingBag } from "lucide-react";
@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { RealTimeProductRating } from "./RealTimeProductRating";
 
 interface ProductCardProps {
-  product: ShopifyProduct;
+  product: StoreProduct;
 }
 
 export const ProductCard = ({ product }: ProductCardProps) => {
