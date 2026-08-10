@@ -1,5 +1,6 @@
 import Stripe from "npm:stripe@17.7.0";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { z } from "npm:zod@3.25.76";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,8 +10,14 @@ const corsHeaders = {
 };
 
 function normalizeId(raw: string): string {
-  return raw.replace(/^local-/, "").replace(/^local-variant-/, "");
+  return raw.replace(/^local-variant-/, "").replace(/^local-/, "");
 }
+
+const RequestSchema = z.object({
+  productId: z.string().uuid().optional(),
+  items: z.array(z.object({ productId: z.string().min(1).max(100), quantity: z.number().int().min(1).max(20) })).min(1).max(50).optional(),
+  locale: z.enum(["en", "pt"]).optional(),
+}).refine((value) => value.productId || value.items?.length, { message: "No items provided" });
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -18,12 +25,14 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const body = await req.json().catch(() => ({}));
-    const { productId, items, locale } = body as {
-      productId?: string;
-      items?: Array<{ productId: string; quantity: number }>;
-      locale?: string;
-    };
+    const parsed = RequestSchema.safeParse(await req.json().catch(() => ({})));
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ error: "Invalid checkout request", details: parsed.error.flatten().fieldErrors }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const { productId, items, locale } = parsed.data;
 
     const requested: Array<{ id: string; quantity: number }> = [];
     if (Array.isArray(items) && items.length > 0) {
@@ -45,7 +54,7 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
     const ids = requested.map((r) => r.id);
@@ -73,7 +82,6 @@ Deno.serve(async (req) => {
     const stripe = new Stripe(stripeKey, { apiVersion: "2024-11-20.acacia" });
     const origin = req.headers.get("origin") ?? "https://example.com";
 
-    const currency = (products[0].currency || "usd").toLowerCase();
     const productMap = new Map(products.map((p) => [p.id, p]));
 
     const line_items = requested
@@ -107,6 +115,15 @@ Deno.serve(async (req) => {
         ),
       },
     });
+
+    const { error: orderError } = await supabase.from("orders").upsert({
+      stripe_session_id: session.id,
+      amount_total: session.amount_total ?? line_items.reduce((sum, item) => sum + item.price_data.unit_amount * item.quantity, 0),
+      currency: session.currency ?? products[0].currency ?? "usd",
+      status: "pending",
+      items: requested.map((item) => ({ product_id: item.id, quantity: item.quantity })),
+    }, { onConflict: "stripe_session_id" });
+    if (orderError) console.error("Failed to record pending order", orderError);
 
     return new Response(JSON.stringify({ url: session.url }), {
       status: 200,
