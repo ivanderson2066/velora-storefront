@@ -72,22 +72,23 @@ export default function AdminPage() {
         setIsAdmin(false);
       }
     });
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) void checkAdmin(session.user.id);
-      setAuthLoading(false);
-    });
+    supabase.auth.getUser().then(({ data, error }) => {
+      const authenticatedUser = error ? null : data.user;
+      setUser(authenticatedUser);
+      if (authenticatedUser) void checkAdmin(authenticatedUser.id);
+    }).finally(() => setAuthLoading(false));
     return () => sub.subscription.unsubscribe();
   }, []);
 
   const checkAdmin = async (uid: string) => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("user_roles")
       .select("role")
       .eq("user_id", uid)
       .eq("role", "admin")
       .maybeSingle();
-    setIsAdmin(!!data);
+    setIsAdmin(!error && !!data);
+    setAuthLoading(false);
   };
 
   const loadProducts = async () => {
@@ -133,8 +134,12 @@ export default function AdminPage() {
 
   const handleSignIn = async (e: FormEvent) => {
     e.preventDefault();
+    setAuthLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) toast.error(error.message);
+    if (error) {
+      setAuthLoading(false);
+      toast.error(error.message);
+    }
   };
 
   const handleSignUp = async (e: FormEvent) => {
@@ -482,7 +487,7 @@ export default function AdminPage() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => copyToClipboard(o.customer_email!, "Email")}
+                            onClick={() => o.customer_email && copyToClipboard(o.customer_email, "Email")}
                           >
                             <Copy className="h-3.5 w-3.5" />
                           </Button>
@@ -558,7 +563,7 @@ export default function AdminPage() {
                               <p className="text-xs uppercase tracking-wider text-muted-foreground mb-0.5">Payment intent</p>
                               <p className="text-xs font-mono break-all">{o.stripe_payment_intent}</p>
                             </div>
-                            <Button size="sm" variant="ghost" onClick={() => copyToClipboard(o.stripe_payment_intent!, "Payment intent")}>
+                            <Button size="sm" variant="ghost" onClick={() => o.stripe_payment_intent && copyToClipboard(o.stripe_payment_intent, "Payment intent")}>
                               <Copy className="h-3.5 w-3.5" />
                             </Button>
                           </Card>

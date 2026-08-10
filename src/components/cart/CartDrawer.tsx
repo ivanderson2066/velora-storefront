@@ -53,14 +53,14 @@ export const CartDrawer = () => {
     try {
       const checkoutUrl = await createCheckout();
       if (checkoutUrl) {
-        window.location.href = checkoutUrl;
+        window.location.assign(checkoutUrl);
         setIsOpen(false);
       } else {
-        toast.error("Failed to create checkout");
+        toast.error("Checkout URL was not returned");
       }
     } catch (error) {
       console.error('Checkout failed:', error);
-      toast.error("Checkout failed. Please try again.");
+      toast.error(error instanceof Error ? error.message : "Checkout failed. Please try again.");
     }
   };
 

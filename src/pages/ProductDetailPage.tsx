@@ -221,12 +221,11 @@ const ProductDetailPage = () => {
     setIsCheckingOut(true);
     try {
       const checkoutUrl = await createCheckout();
-      if (checkoutUrl) {
-        window.location.href = checkoutUrl;
-      }
+      if (!checkoutUrl) throw new Error("Checkout URL was not returned");
+      window.location.assign(checkoutUrl);
     } catch (error) {
       console.error("Checkout failed:", error);
-      toast.error("Failed to create checkout");
+      toast.error(error instanceof Error ? error.message : "Failed to create checkout");
     } finally {
       setIsCheckingOut(false);
     }
@@ -344,18 +343,15 @@ const ProductDetailPage = () => {
                           o => o.name === option.name && o.value === value
                         );
                         return (
-                          <button
+                          <Button
                             key={value}
                             onClick={() => variant && setSelectedVariant(variant)}
                             disabled={!variant?.availableForSale}
-                            className={`px-4 py-2 text-sm border rounded-lg transition-colors ${
-                              isSelected
-                                ? "border-foreground bg-foreground text-background"
-                                : "border-border hover:border-foreground"
-                            } ${!variant?.availableForSale ? "opacity-50 cursor-not-allowed" : ""}`}
+                            variant={isSelected ? "default" : "outline"}
+                            size="sm"
                           >
                             {value}
-                          </button>
+                          </Button>
                         );
                       })}
                     </div>

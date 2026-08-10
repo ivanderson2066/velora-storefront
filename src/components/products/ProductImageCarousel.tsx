@@ -1,11 +1,11 @@
 import { useState, useRef } from "react";
-import { ShopifyProduct } from "@/lib/shopify";
+import { StoreProduct } from "@/lib/products";
 import { cn } from "@/lib/utils";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface ProductImageCarouselProps {
-  images: ShopifyProduct["node"]["images"]["edges"];
+  images: StoreProduct["node"]["images"]["edges"];
   productTitle: string;
   selectedIndex: number;
   onSelectImage: (index: number) => void;
