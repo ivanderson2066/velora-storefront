@@ -1,10 +1,7 @@
-import { useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import AnnouncementBar from "@/components/layout/AnnouncementBar";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import { fetchShopPolicies } from "@/lib/shopify";
-import { Loader2 } from "lucide-react";
 
 const defaultTermsContent = `
 <h2>1. Agreement to Terms</h2>
@@ -46,31 +43,6 @@ const defaultTermsContent = `
 `;
 
 const TermsPage = () => {
-  const [termsHtml, setTermsHtml] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const policies = await fetchShopPolicies();
-        if (policies?.termsOfService?.body) {
-          setTermsHtml(policies.termsOfService.body);
-        } else {
-          // Use default professional content
-          setTermsHtml(defaultTermsContent);
-        }
-      } catch (e) {
-        console.error('Failed to load terms:', e);
-        setTermsHtml(defaultTermsContent);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    load();
-  }, []);
-
   return (
     <>
       <Helmet>
@@ -83,20 +55,14 @@ const TermsPage = () => {
 
       <main className="velora-section bg-background min-h-[60vh]">
         <div className="velora-container max-w-4xl">
-          {loading ? (
-            <div className="flex items-center justify-center py-20">
-              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : (
-            <>
+          <>
               <h1 className="velora-heading-lg mb-8 text-center">Terms of Service</h1>
               <p className="text-center text-muted-foreground mb-12">Last updated: December 2024</p>
               <div
                 className="prose prose-neutral dark:prose-invert max-w-none [&_h2]:mt-8 [&_h2]:mb-4 [&_h2]:text-xl [&_h2]:font-semibold [&_p]:mb-4 [&_ul]:mb-4 [&_li]:mb-2"
-                dangerouslySetInnerHTML={{ __html: termsHtml || '' }}
+                dangerouslySetInnerHTML={{ __html: defaultTermsContent }}
               />
-            </>
-          )}
+          </>
         </div>
       </main>
 

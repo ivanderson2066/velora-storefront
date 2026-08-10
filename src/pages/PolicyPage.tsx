@@ -1,11 +1,8 @@
-import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { Loader2 } from "lucide-react";
 import AnnouncementBar from "@/components/layout/AnnouncementBar";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import { fetchShopPolicies, ShopPolicy } from "@/lib/shopify";
 
 type PolicyType = "privacy" | "refunds" | "shipping" | "terms";
 
@@ -123,33 +120,8 @@ const policyConfig: Record<PolicyType, { title: string; key: "privacyPolicy" | "
 const PolicyPage = () => {
   const location = useLocation();
   const type = location.pathname.replace('/', '') as PolicyType;
-  const [policy, setPolicy] = useState<ShopPolicy | null>(null);
-  const [loading, setLoading] = useState(true);
-
   const config = policyConfig[type] || policyConfig.privacy;
   const defaultPolicy = defaultPolicies[type] || defaultPolicies.privacy;
-
-  useEffect(() => {
-    const loadPolicy = async () => {
-      setLoading(true);
-      try {
-        const policies = await fetchShopPolicies();
-        if (policies && policies[config.key]?.body) {
-          setPolicy(policies[config.key]);
-        } else {
-          // Use default professional content
-          setPolicy({ title: defaultPolicy.title, body: defaultPolicy.body, handle: type });
-        }
-      } catch (error) {
-        console.error("Failed to load policy:", error);
-        setPolicy({ title: defaultPolicy.title, body: defaultPolicy.body, handle: type });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadPolicy();
-  }, [type, config.key, defaultPolicy.title, defaultPolicy.body]);
 
   return (
     <>
@@ -163,13 +135,8 @@ const PolicyPage = () => {
 
       <main className="velora-section bg-background min-h-[60vh]">
         <div className="velora-container max-w-4xl">
-          {loading ? (
-            <div className="flex items-center justify-center py-20">
-              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : policy ? (
-            <>
-              <h1 className="velora-heading-lg mb-8 text-center">{policy.title}</h1>
+          <>
+              <h1 className="velora-heading-lg mb-8 text-center">{defaultPolicy.title}</h1>
               <p className="text-center text-muted-foreground mb-12">Last updated: December 2024</p>
               <div 
                 className="prose prose-neutral dark:prose-invert max-w-none 
@@ -181,10 +148,9 @@ const PolicyPage = () => {
                   [&_li]:text-muted-foreground [&_li]:mb-2
                   [&_a]:text-accent [&_a]:underline [&_a]:hover:no-underline
                   [&_strong]:font-semibold [&_strong]:text-foreground"
-                dangerouslySetInnerHTML={{ __html: policy.body }}
+                dangerouslySetInnerHTML={{ __html: defaultPolicy.body }}
               />
-            </>
-          ) : null}
+          </>
         </div>
       </main>
 

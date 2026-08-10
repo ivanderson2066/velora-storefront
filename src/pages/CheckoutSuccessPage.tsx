@@ -13,7 +13,6 @@ type OrderStatus = {
   status: string;
   amount_total: number;
   currency: string;
-  customer_email: string | null;
   items: Array<{ product_id: string; quantity: number }> | null;
   created_at: string;
 } | null;
@@ -28,7 +27,6 @@ export default function CheckoutSuccessPage() {
   const [polling, setPolling] = useState(true);
 
   useEffect(() => {
-    clearCart();
     const id = requestAnimationFrame(() => setMounted(true));
     return () => cancelAnimationFrame(id);
   }, [clearCart]);
@@ -46,14 +44,19 @@ export default function CheckoutSuccessPage() {
       const found = (data as { order?: OrderStatus } | null)?.order ?? null;
       if (!error && found) {
         setOrder(found);
-        if (found.status === "paid" || attempts >= 20) { setPolling(false); return; }
+        if (found.status === "paid") {
+          clearCart();
+          setPolling(false);
+          return;
+        }
+        if (attempts >= 20) { setPolling(false); return; }
       }
       if (attempts >= 20) { setPolling(false); return; }
       setTimeout(poll, 2000);
     };
     void poll();
     return () => { cancelled = true; };
-  }, [sessionId]);
+  }, [clearCart, sessionId]);
 
   const paid = order?.status === "paid";
   const amountLabel = order
@@ -113,9 +116,6 @@ export default function CheckoutSuccessPage() {
                         <span className="font-medium">{amountLabel}</span>
                       </p>
                     )}
-                    {order?.customer_email && (
-                      <p className="text-xs text-muted-foreground mt-1">{order.customer_email}</p>
-                    )}
                   </div>
                   {paid ? (
                     <span className="shrink-0 inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
@@ -128,9 +128,9 @@ export default function CheckoutSuccessPage() {
                       Confirming…
                     </span>
                   ) : (
-                    <span className="shrink-0 inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
-                      Processing
-                    </span>
+                    <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+                      Check again
+                    </Button>
                   )}
                 </div>
                 <Separator className="mb-6" />

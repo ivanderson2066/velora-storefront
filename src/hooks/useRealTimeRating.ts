@@ -72,7 +72,7 @@ export const useRealTimeRating = (
           const supabaseSum = uniqueReviews.reduce((acc: any, curr: any) => acc + (curr.rating || 0), 0);
 
           // SOMA COM DADOS LOCAIS
-          // Assumimos que dados locais (Shopify JSON) são reviews "antigos" importados que NÃO estão no Supabase.
+          // Imported CSV reviews are historical records and are combined with database reviews.
           // Se você importou TUDO para o Supabase, então initialCount deveria ser ignorado.
           // Mas para segurança, mantemos a soma.
           

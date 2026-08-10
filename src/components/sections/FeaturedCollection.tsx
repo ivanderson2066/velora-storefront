@@ -2,11 +2,11 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Loader2 } from "lucide-react";
-import { fetchProducts, ShopifyProduct } from "@/lib/shopify";
+import { fetchProducts, StoreProduct } from "@/lib/products";
 import { ProductCard } from "@/components/products/ProductCard";
 
 const FeaturedCollection = () => {
-  const [products, setProducts] = useState<ShopifyProduct[]>([]);
+  const [products, setProducts] = useState<StoreProduct[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

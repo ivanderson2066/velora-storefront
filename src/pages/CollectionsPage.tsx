@@ -6,7 +6,7 @@ import AnnouncementBar from "@/components/layout/AnnouncementBar";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { ProductCard } from "@/components/products/ProductCard";
-import { fetchProducts, ShopifyProduct } from "@/lib/shopify";
+import { fetchProducts, StoreProduct } from "@/lib/products";
 
 interface Collection {
   id: string;
@@ -42,7 +42,7 @@ const collections: Collection[] = [
 
 const CollectionsPage = () => {
   const { collectionId } = useParams<{ collectionId?: string }>();
-  const [products, setProducts] = useState<ShopifyProduct[]>([]);
+  const [products, setProducts] = useState<StoreProduct[]>([]);
   const [loading, setLoading] = useState(false);
 
   const currentCollection = collectionId 
@@ -52,7 +52,7 @@ const CollectionsPage = () => {
   useEffect(() => {
     if (currentCollection) {
       setLoading(true);
-      fetchProducts(20, currentCollection.query)
+      fetchProducts(20)
         .then(setProducts)
         .catch(console.error)
         .finally(() => setLoading(false));

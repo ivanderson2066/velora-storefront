@@ -17,14 +17,12 @@ import ContactPage from "./pages/ContactPage";
 import AboutPage from "./pages/AboutPage";
 import PolicyPage from "./pages/PolicyPage";
 import TermsPage from "./pages/TermsPage";
-import { Navigate } from "react-router-dom";
 import FAQPage from "./pages/FAQPage";
 import ShippingPolicyPage from "./pages/ShippingPolicyPage";
 import RefundPolicyPage from "./pages/RefundPolicyPage";
 import { useCartStore } from "@/stores/cartStore";
 import { useFacebookPixel } from "@/hooks/useFacebookPixel";
 import { I18nProvider } from "@/lib/i18n";
-import ProductsPage from "./pages/ProductsPage";
 import AdminPage from "./pages/AdminPage";
 import CheckoutSuccessPage from "./pages/CheckoutSuccessPage";
 import CheckoutCancelPage from "./pages/CheckoutCancelPage";
@@ -125,11 +123,11 @@ const App = () => {
   };
 
   return (
-    <HelmetProvider>
-      <QueryClientProvider client={queryClient}>
-        <I18nProvider>
-        <TooltipProvider>
-          <ErrorBoundary>
+    <ErrorBoundary>
+      <HelmetProvider>
+        <QueryClientProvider client={queryClient}>
+          <I18nProvider>
+          <TooltipProvider>
             <Toaster />
             <Sonner />
             <BrowserRouter>
@@ -151,7 +149,7 @@ const App = () => {
                 <Route path="/shipping" element={<PolicyPage />} />
                 <Route path="/terms" element={<TermsPage />} />
                 <Route path="/terms-of-service" element={<TermsPage />} />
-                <Route path="/products" element={<ProductsPage />} />
+                <Route path="/products" element={<ShopPage />} />
                 <Route path="/admin" element={<AdminPage />} />
                 <Route path="/checkout/success" element={<CheckoutSuccessPage />} />
                 <Route path="/checkout/cancel" element={<CheckoutCancelPage />} />
@@ -174,11 +172,11 @@ const App = () => {
                 </div>
               )}
             </BrowserRouter>
-          </ErrorBoundary>
-        </TooltipProvider>
-        </I18nProvider>
-      </QueryClientProvider>
-    </HelmetProvider>
+          </TooltipProvider>
+          </I18nProvider>
+        </QueryClientProvider>
+      </HelmetProvider>
+    </ErrorBoundary>
   );
 };
 

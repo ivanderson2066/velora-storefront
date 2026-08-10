@@ -11,7 +11,7 @@ import {
 import { ShoppingBag, Minus, Plus, Trash2, ExternalLink, Loader2 } from "lucide-react";
 import { useCartStore } from "@/stores/cartStore";
 import { toast } from "sonner";
-import { trackInitiateCheckout, extractShopifyId } from "@/lib/fbPixel";
+import { trackInitiateCheckout, normalizeProductId } from "@/lib/fbPixel";
 
 export const CartDrawer = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -35,9 +35,9 @@ export const CartDrawer = () => {
   const handleCheckout = async () => {
     // Facebook Pixel: InitiateCheckout
     if (items.length > 0) {
-      const contentIds = items.map(item => extractShopifyId(item.product?.node?.id || item.variantId));
+      const contentIds = items.map(item => normalizeProductId(item.product?.node?.id || item.variantId));
       const contents = items.map(item => ({
-        id: extractShopifyId(item.product?.node?.id || item.variantId),
+        id: normalizeProductId(item.product?.node?.id || item.variantId),
         quantity: item.quantity,
       }));
       
@@ -53,14 +53,14 @@ export const CartDrawer = () => {
     try {
       const checkoutUrl = await createCheckout();
       if (checkoutUrl) {
-        window.location.href = checkoutUrl;
+        window.location.assign(checkoutUrl);
         setIsOpen(false);
       } else {
-        toast.error("Failed to create checkout");
+        toast.error("Checkout URL was not returned");
       }
     } catch (error) {
       console.error('Checkout failed:', error);
-      toast.error("Checkout failed. Please try again.");
+      toast.error(error instanceof Error ? error.message : "Checkout failed. Please try again.");
     }
   };
 
@@ -218,7 +218,7 @@ export const CartDrawer = () => {
                 </Button>
                 
                 <p className="text-xs text-center text-muted-foreground">
-                  Secure checkout powered by Shopify
+                  Secure checkout powered by Stripe
                 </p>
               </div>
             </>

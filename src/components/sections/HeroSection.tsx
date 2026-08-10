@@ -60,10 +60,6 @@ const HeroSection = () => {
           <div className="order-1 lg:order-2 animate-fade-in" style={{ animationDelay: "200ms" }}>
             <div className="relative aspect-[4/5] lg:aspect-[3/4] bg-gradient-to-br from-accent/20 to-secondary rounded-2xl overflow-hidden shadow-2xl">
               <img
-                // ************************************************************************************************
-                // PARA TROCAR A IMAGEM:
-                // Substitua a URL abaixo pela URL da sua imagem da lâmpada 3 em 1.
-                // ************************************************************************************************
                 src="https://cf.cjdropshipping.com/17085600/2402220237250328700.jpg?x-oss-process=image%2Fformat%2Cwebp" 
                 alt="Modern smart home 3-in-1 lamp"
                 className="w-full h-full object-cover"

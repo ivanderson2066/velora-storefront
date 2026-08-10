@@ -22,14 +22,18 @@ Deno.serve(async (req) => {
       });
     }
 
-    const admin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
+    const backendUrl = Deno.env.get("SUPABASE_URL");
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!backendUrl || !serviceKey) {
+      return new Response(JSON.stringify({ error: "Order service unavailable" }), {
+        status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const admin = createClient(backendUrl, serviceKey);
 
     const { data, error } = await admin
       .from("orders")
-      .select("status, amount_total, currency, customer_email, items, created_at")
+      .select("status, amount_total, currency, items, created_at")
       .eq("stripe_session_id", sessionId)
       .maybeSingle();
 

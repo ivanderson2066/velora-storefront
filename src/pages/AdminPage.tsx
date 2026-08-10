@@ -72,22 +72,23 @@ export default function AdminPage() {
         setIsAdmin(false);
       }
     });
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) void checkAdmin(session.user.id);
-      setAuthLoading(false);
-    });
+    supabase.auth.getUser().then(({ data, error }) => {
+      const authenticatedUser = error ? null : data.user;
+      setUser(authenticatedUser);
+      if (authenticatedUser) void checkAdmin(authenticatedUser.id);
+    }).finally(() => setAuthLoading(false));
     return () => sub.subscription.unsubscribe();
   }, []);
 
   const checkAdmin = async (uid: string) => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("user_roles")
       .select("role")
       .eq("user_id", uid)
       .eq("role", "admin")
       .maybeSingle();
-    setIsAdmin(!!data);
+    setIsAdmin(!error && !!data);
+    setAuthLoading(false);
   };
 
   const loadProducts = async () => {
@@ -133,19 +134,12 @@ export default function AdminPage() {
 
   const handleSignIn = async (e: FormEvent) => {
     e.preventDefault();
+    setAuthLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) toast.error(error.message);
-  };
-
-  const handleSignUp = async (e: FormEvent) => {
-    e.preventDefault();
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { emailRedirectTo: window.location.origin + "/admin" },
-    });
-    if (error) toast.error(error.message);
-    else toast.success("Account created. If this is the first admin, ask to be granted admin role.");
+    if (error) {
+      setAuthLoading(false);
+      toast.error(error.message);
+    }
   };
 
   const handleSignOut = async () => {
@@ -153,6 +147,8 @@ export default function AdminPage() {
   };
 
   const uploadImage = async (file: File): Promise<string> => {
+    if (!file.type.startsWith("image/")) throw new Error("Select a valid image file");
+    if (file.size > 5 * 1024 * 1024) throw new Error("Image must be 5 MB or smaller");
     const ext = file.name.split(".").pop() || "jpg";
     const path = `${crypto.randomUUID()}.${ext}`;
     const { error } = await supabase.storage
@@ -171,7 +167,11 @@ export default function AdminPage() {
       if (imageFile) {
         image_url = await uploadImage(imageFile);
       }
-      const priceCents = Math.round(parseFloat(form.price_usd || "0") * 100);
+      const parsedPrice = Number(form.price_usd);
+      if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
+        throw new Error("Price must be greater than zero");
+      }
+      const priceCents = Math.round(parsedPrice * 100);
       const payload = {
         name: form.name,
         description: form.description || null,
@@ -240,12 +240,9 @@ export default function AdminPage() {
                 <Label>{t("admin.password")}</Label>
                 <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
               </div>
-              <div className="flex gap-2">
-                <Button type="submit" className="flex-1" onClick={handleSignIn}>
+              <div>
+                <Button type="submit" className="w-full" onClick={handleSignIn}>
                   {t("admin.signin")}
-                </Button>
-                <Button type="button" variant="outline" className="flex-1" onClick={handleSignUp}>
-                  {t("admin.signup")}
                 </Button>
               </div>
             </form>
@@ -315,7 +312,7 @@ export default function AdminPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label>{t("admin.price")}</Label>
-                    <Input type="number" step="0.01" min="0" value={form.price_usd} onChange={(e) => setForm({ ...form, price_usd: e.target.value })} required />
+                    <Input type="number" step="0.01" min="0.01" value={form.price_usd} onChange={(e) => setForm({ ...form, price_usd: e.target.value })} required />
                   </div>
                 </div>
                 <div>
@@ -482,7 +479,7 @@ export default function AdminPage() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => copyToClipboard(o.customer_email!, "Email")}
+                            onClick={() => o.customer_email && copyToClipboard(o.customer_email, "Email")}
                           >
                             <Copy className="h-3.5 w-3.5" />
                           </Button>
@@ -558,7 +555,7 @@ export default function AdminPage() {
                               <p className="text-xs uppercase tracking-wider text-muted-foreground mb-0.5">Payment intent</p>
                               <p className="text-xs font-mono break-all">{o.stripe_payment_intent}</p>
                             </div>
-                            <Button size="sm" variant="ghost" onClick={() => copyToClipboard(o.stripe_payment_intent!, "Payment intent")}>
+                            <Button size="sm" variant="ghost" onClick={() => o.stripe_payment_intent && copyToClipboard(o.stripe_payment_intent, "Payment intent")}>
                               <Copy className="h-3.5 w-3.5" />
                             </Button>
                           </Card>
